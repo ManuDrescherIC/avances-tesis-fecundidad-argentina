@@ -1,0 +1,2278 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="es" xml:lang="es"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Manuel Drescher">
+
+<title>Modelado espacial y GWR</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="argentina_gwr_modelado_files/libs/clipboard/clipboard.min.js"></script>
+<script src="argentina_gwr_modelado_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="argentina_gwr_modelado_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="argentina_gwr_modelado_files/libs/quarto-html/popper.min.js"></script>
+<script src="argentina_gwr_modelado_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="argentina_gwr_modelado_files/libs/quarto-html/anchor.min.js"></script>
+<link href="argentina_gwr_modelado_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="argentina_gwr_modelado_files/libs/quarto-html/quarto-syntax-highlighting-845c23b38eaddc0f92fda52bfe77a8c8.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="argentina_gwr_modelado_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="argentina_gwr_modelado_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="argentina_gwr_modelado_files/libs/bootstrap/bootstrap-d4791fd432f8730d65180f3796899ee9.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="argentina_gwr_modelado_files/libs/kePrint-0.0.1/kePrint.js"></script>
+<link href="argentina_gwr_modelado_files/libs/lightable-0.0.1/lightable.css" rel="stylesheet">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../docs/styles/notebook_tables.css">
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active" data-toc-expanded="99">
+    <h2 id="toc-title">Tabla de contenidos</h2>
+   
+  <ul>
+  <li><a href="#objetivo-y-lugar-de-este-notebook" id="toc-objetivo-y-lugar-de-este-notebook" class="nav-link active" data-scroll-target="#objetivo-y-lugar-de-este-notebook"><span class="header-section-number">1</span> Objetivo y lugar de este notebook</a></li>
+  <li><a href="#cierre-de-los-notebooks-2-y-3" id="toc-cierre-de-los-notebooks-2-y-3" class="nav-link" data-scroll-target="#cierre-de-los-notebooks-2-y-3"><span class="header-section-number">2</span> Cierre de los notebooks 2 y 3</a>
+  <ul>
+  <li><a href="#qué-se-conserva-y-qué-cambia" id="toc-qué-se-conserva-y-qué-cambia" class="nav-link" data-scroll-target="#qué-se-conserva-y-qué-cambia"><span class="header-section-number">2.1</span> Qué se conserva y qué cambia</a></li>
+  <li><a href="#cómo-se-calculó-el-criterio" id="toc-cómo-se-calculó-el-criterio" class="nav-link" data-scroll-target="#cómo-se-calculó-el-criterio"><span class="header-section-number">2.2</span> Cómo se calculó el criterio</a></li>
+  <li><a href="#núcleo-retenido-y-variables-excluidas" id="toc-núcleo-retenido-y-variables-excluidas" class="nav-link" data-scroll-target="#núcleo-retenido-y-variables-excluidas"><span class="header-section-number">2.3</span> Núcleo retenido y variables excluidas</a></li>
+  <li><a href="#flujo-de-cálculo-que-sigue-el-notebook" id="toc-flujo-de-cálculo-que-sigue-el-notebook" class="nav-link" data-scroll-target="#flujo-de-cálculo-que-sigue-el-notebook"><span class="header-section-number">2.4</span> Flujo de cálculo que sigue el notebook</a></li>
+  </ul></li>
+  <li><a href="#criterio-final-de-selección-de-variables" id="toc-criterio-final-de-selección-de-variables" class="nav-link" data-scroll-target="#criterio-final-de-selección-de-variables"><span class="header-section-number">3</span> Criterio final de selección de variables</a>
+  <ul>
+  <li><a href="#regla-general" id="toc-regla-general" class="nav-link" data-scroll-target="#regla-general"><span class="header-section-number">3.1</span> Regla general</a></li>
+  <li><a href="#lo-que-se-mantiene-entre-argentina-y-las-regiones" id="toc-lo-que-se-mantiene-entre-argentina-y-las-regiones" class="nav-link" data-scroll-target="#lo-que-se-mantiene-entre-argentina-y-las-regiones"><span class="header-section-number">3.2</span> Lo que se mantiene entre Argentina y las regiones</a></li>
+  <li><a href="#núcleo-común-y-exclusiones-por-escala" id="toc-núcleo-común-y-exclusiones-por-escala" class="nav-link" data-scroll-target="#núcleo-común-y-exclusiones-por-escala"><span class="header-section-number">3.3</span> Núcleo común y exclusiones por escala</a></li>
+  <li><a href="#qué-entra-y-qué-queda-afuera" id="toc-qué-entra-y-qué-queda-afuera" class="nav-link" data-scroll-target="#qué-entra-y-qué-queda-afuera"><span class="header-section-number">3.4</span> Qué entra y qué queda afuera</a></li>
+  </ul></li>
+  <li><a href="#marco-matemático-del-modelado" id="toc-marco-matemático-del-modelado" class="nav-link" data-scroll-target="#marco-matemático-del-modelado"><span class="header-section-number">4</span> Marco matemático del modelado</a>
+  <ul>
+  <li><a href="#notación-y-supuestos" id="toc-notación-y-supuestos" class="nav-link" data-scroll-target="#notación-y-supuestos"><span class="header-section-number">4.1</span> Notación y supuestos</a></li>
+  <li><a href="#cómo-leer-un-coeficiente" id="toc-cómo-leer-un-coeficiente" class="nav-link" data-scroll-target="#cómo-leer-un-coeficiente"><span class="header-section-number">4.2</span> Cómo leer un coeficiente</a></li>
+  <li><a href="#modelos-espaciales-globales" id="toc-modelos-espaciales-globales" class="nav-link" data-scroll-target="#modelos-espaciales-globales"><span class="header-section-number">4.3</span> Modelos espaciales globales</a></li>
+  <li><a href="#gwr-como-descomposición-local" id="toc-gwr-como-descomposición-local" class="nav-link" data-scroll-target="#gwr-como-descomposición-local"><span class="header-section-number">4.4</span> GWR como descomposición local</a></li>
+  </ul></li>
+  <li><a href="#modelos-globales-sobre-argentina" id="toc-modelos-globales-sobre-argentina" class="nav-link" data-scroll-target="#modelos-globales-sobre-argentina"><span class="header-section-number">5</span> Modelos globales sobre Argentina</a>
+  <ul>
+  <li><a href="#qué-significa-cada-columna" id="toc-qué-significa-cada-columna" class="nav-link" data-scroll-target="#qué-significa-cada-columna"><span class="header-section-number">5.0.1</span> Qué significa cada columna</a></li>
+  <li><a href="#ajuste-lineal-y-dependencia-espacial" id="toc-ajuste-lineal-y-dependencia-espacial" class="nav-link" data-scroll-target="#ajuste-lineal-y-dependencia-espacial"><span class="header-section-number">5.1</span> Ajuste lineal y dependencia espacial</a>
+  <ul>
+  <li><a href="#tgf-ajuste-global-y-estructura-espacial-residual" id="toc-tgf-ajuste-global-y-estructura-espacial-residual" class="nav-link" data-scroll-target="#tgf-ajuste-global-y-estructura-espacial-residual"><span class="header-section-number">5.1.1</span> TGF: ajuste global y estructura espacial residual</a></li>
+  <li><a href="#pmf-40-44-una-trayectoria-casi-completada" id="toc-pmf-40-44-una-trayectoria-casi-completada" class="nav-link" data-scroll-target="#pmf-40-44-una-trayectoria-casi-completada"><span class="header-section-number">5.1.2</span> PMF 40-44: una trayectoria casi completada</a></li>
+  <li><a href="#qué-dice-la-comparación-entre-tgf-y-pmf" id="toc-qué-dice-la-comparación-entre-tgf-y-pmf" class="nav-link" data-scroll-target="#qué-dice-la-comparación-entre-tgf-y-pmf"><span class="header-section-number">5.1.3</span> Qué dice la comparación entre TGF y PMF</a></li>
+  <li><a href="#cómo-leer-los-coeficientes" id="toc-cómo-leer-los-coeficientes" class="nav-link" data-scroll-target="#cómo-leer-los-coeficientes"><span class="header-section-number">5.1.4</span> Cómo leer los coeficientes</a></li>
+  <li><a href="#qué-hace-el-flujo-computacional" id="toc-qué-hace-el-flujo-computacional" class="nav-link" data-scroll-target="#qué-hace-el-flujo-computacional"><span class="header-section-number">5.1.5</span> Qué hace el flujo computacional</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#gwr-sobre-argentina" id="toc-gwr-sobre-argentina" class="nav-link" data-scroll-target="#gwr-sobre-argentina"><span class="header-section-number">6</span> GWR sobre Argentina</a>
+  <ul>
+  <li><a href="#qué-significa-el-ancho-de-banda" id="toc-qué-significa-el-ancho-de-banda" class="nav-link" data-scroll-target="#qué-significa-el-ancho-de-banda"><span class="header-section-number">6.0.1</span> Qué significa el ancho de banda</a></li>
+  <li><a href="#qué-dicen-los-resultados-nacionales" id="toc-qué-dicen-los-resultados-nacionales" class="nav-link" data-scroll-target="#qué-dicen-los-resultados-nacionales"><span class="header-section-number">6.0.2</span> Qué dicen los resultados nacionales</a></li>
+  </ul></li>
+  <li><a href="#extensión-regional" id="toc-extensión-regional" class="nav-link" data-scroll-target="#extensión-regional"><span class="header-section-number">7</span> Extensión regional</a></li>
+  <li><a href="#conclusiones" id="toc-conclusiones" class="nav-link" data-scroll-target="#conclusiones"><span class="header-section-number">8</span> Conclusiones</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Modelado espacial y GWR</h1>
+<p class="subtitle lead">Selección final de covariables, modelos globales y heterogeneidad local</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Autor/a</div>
+    <div class="quarto-title-meta-contents">
+             <p>Manuel Drescher </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Fecha de publicación</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">24 de abril de 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="objetivo-y-lugar-de-este-notebook" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Objetivo y lugar de este notebook</h1>
+<p>Este cuarto notebook cierra una secuencia analítica y abre otra. Los notebooks previos resolvieron tres tareas que ahora conviene no volver a dispersar: describir el cambio de la fecundidad, identificar patrones espaciales y depurar un universo de covariables comparables entre censos. Lo que sigue ya no es sólo ubicar la fecundidad ni enumerar variables asociadas, sino mostrar cómo se modela esa relación cuando el territorio deja de ser un fondo neutro y pasa a formar parte del mecanismo.</p>
+<p>Chi y Zhu son la guía metodológica más sólida para ese pasaje: primero EDA y reducción de dimensión, después modelos globales, luego diagnósticos espaciales, y recién al final una regresión local como GWR <span class="citation" data-cites="chi_spatial_2008 chi_spatial_2019">(<a href="#ref-chi_spatial_2008" role="doc-biblioref">Chi y Zhu 2008</a>, <a href="#ref-chi_spatial_2019" role="doc-biblioref">2019</a>)</span>. Ese orden no es una formalidad ni una preferencia de software. Es la manera de evitar que GWR aparezca como una solución estética para una especificación global mal armada.</p>
+<p>La decisión de trabajar con la <strong>TGF censal reconstruida</strong> como resultado central es demográficamente más precisa para el modelado espacial: sintetiza la intensidad reciente de la fecundidad y puede calcularse con granularidad departamental para ambos censos. No se la presenta como sustituto de la TGF oficial basada en estadísticas vitales y proyecciones de población; se la usa porque comparte fuente, unidad espacial y universo de procesamiento con las covariables censales <span class="citation" data-cites="indec_anuario_2023_tgf indec_proyecciones_nacionales_2022_2040 indec_proyecciones_jurisdicciones_2022_2040">(<a href="#ref-indec_anuario_2023_tgf" role="doc-biblioref">Instituto Nacional de Estadística y Censos 2023</a>, <a href="#ref-indec_proyecciones_nacionales_2022_2040" role="doc-biblioref">2025a</a>, <a href="#ref-indec_proyecciones_jurisdicciones_2022_2040" role="doc-biblioref">2025b</a>)</span>. La <strong>PMF 40-44</strong> opera como contraste de trayectoria casi completada y la <strong>PMG</strong> queda como antecedente descriptivo ya cerrado en los notebooks anteriores. La tesis, entonces, cambia de pregunta: pasa de mostrar cómo se distribuye la fecundidad a explicar qué la organiza y cómo esa organización cambia al moverse por el territorio. Esa transición también es fiel a Chi: antes de intervenir el espacio conviene dejar claro qué se entiende por respuesta, qué se entiende por covariable y qué tipo de mecanismo se intenta poner a prueba <span class="citation" data-cites="chi_spatial_2008 chi_spatial_2019">(<a href="#ref-chi_spatial_2008" role="doc-biblioref">Chi y Zhu 2008</a>, <a href="#ref-chi_spatial_2019" role="doc-biblioref">2019</a>)</span>.</p>
+<p>Hay una segunda precisión que ordena todo el notebook. El núcleo conceptual de covariables es el mismo para Argentina y para los recortes regionales; lo que cambia por escala no es la pregunta, sino la pertinencia de ciertas piezas del soporte empírico. Cuando una covariable deja de tener variación útil, pierde sentido sustantivo o pasa a ser apenas un control contextual sin mecanismo claro, se la excluye para ese recorte. La regla es la misma; la superficie territorial sobre la que se la aplica no lo es. Dicho de otro modo: el modelo nacional y los modelos regionales comparten la misma familia explicativa, aunque no estén obligados a conservar exactamente el mismo conjunto operativo de predictores en todos los soportes.</p>
+<p>En términos prácticos, el modelo nacional fija un núcleo común y cada recorte regional lo hereda como punto de partida. Después, sólo sobreviven las variables que todavía aportan variación interpretable en esa escala. No hay una segunda selección desde cero ni una fórmula nueva por capricho: hay la misma lógica espacial aplicada a soportes territoriales distintos.</p>
+</section>
+<section id="cierre-de-los-notebooks-2-y-3" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Cierre de los notebooks 2 y 3</h1>
+<p>Los notebooks 2 y 3 no dejaron un ranking; dejaron un criterio de recorte. La decisión final no sale de sumar puntajes como si todas las métricas midieran lo mismo. Sale de leer, para cada familia de variables, qué combinación ofrece mejor sentido demográfico, estabilidad entre censos, asociación con la TGF y capacidad para reducir el patrón espacial que queda en los residuos. Ese criterio no reemplaza al modelado: lo prepara.</p>
+<p>Cuando en la tabla aparece <code>Magnitud media de Spearman</code>, lo que se está resumiendo es la magnitud promedio de la correlación de rangos entre la covariable y la TGF en 2010 y 2022, sin mezclar ahí el signo. La dirección de la asociación se lee aparte en <code>Persistencia del signo</code>, porque acá interesa distinguir dos cosas que no son equivalentes: cuán fuerte es la relación y si esa relación se mantiene en la misma dirección entre censos.</p>
+<p>Chi y Zhu insisten en que la regresión espacial no empieza en el modelo sino mucho antes: primero EDA, después reducción de dimensión, luego comparación de especificaciones globales y sólo al final una regresión local <span class="citation" data-cites="chi_spatial_2008 chi_spatial_2019">(<a href="#ref-chi_spatial_2008" role="doc-biblioref">Chi y Zhu 2008</a>, <a href="#ref-chi_spatial_2019" role="doc-biblioref">2019</a>)</span>. En esa secuencia, la selección no depende de un único indicador; combina teoría, inspección exploratoria, correlaciones entre explicativas, ajuste global y diagnóstico espacial posterior. En ese marco, este notebook no inventa una regla nueva: traduce ese orden al caso argentino y lo deja listo para el modelado formal.</p>
+<section id="qué-se-conserva-y-qué-cambia" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="qué-se-conserva-y-qué-cambia"><span class="header-section-number">2.1</span> Qué se conserva y qué cambia</h2>
+<p>La tesis no cambia de familia analítica cuando pasa de Argentina a los recortes regionales. Lo que cambia es la escala de observación y, con ella, la tolerancia del territorio a ciertas covariables de contexto. El núcleo conceptual se mantiene: educación, mercado laboral, salud y protección social, pobreza estructural y condiciones materiales. Lo que varía por recorte es si alguna variable deja de tener variación útil, si pierde sentido sustantivo o si pasa a funcionar sólo como control agregado.</p>
+<p>La consecuencia práctica es importante: Argentina y las regiones comparten la misma arquitectura conceptual, pero no necesariamente la misma lista exacta de covariables en cada estimación. No se trata de copiar una fórmula sin cambios; se trata de sostener el mismo conjunto de mecanismos y retirar, cuando corresponde, las piezas que el territorio ya no sostiene con información interpretable. Esa decisión es más fiel a Chi que una regla rígida e inmóvil, porque respeta el principio de partir de un conjunto amplio, reducir dimensión y volver a mirar qué sobrevive en cada escala <span class="citation" data-cites="chi_spatial_2019">(<a href="#ref-chi_spatial_2019" role="doc-biblioref">Chi y Zhu 2019</a>)</span>.</p>
+</section>
+<section id="cómo-se-calculó-el-criterio" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="cómo-se-calculó-el-criterio"><span class="header-section-number">2.2</span> Cómo se calculó el criterio</h2>
+<p>Para cada covariable candidata y para cada censo, se ajustó un modelo lineal global por mínimos cuadrados ordinarios de la forma</p>
+<p><span class="math display">\[
+TGF_i = \alpha + \beta X_i + \varepsilon_i
+\]</span></p>
+<p>donde <span class="math inline">\(TGF_i\)</span> es la tasa global de fecundidad del departamento <span class="math inline">\(i\)</span>, <span class="math inline">\(X_i\)</span> es la covariable candidata y <span class="math inline">\(\varepsilon_i\)</span> es el error no observable del modelo. A partir de ese ajuste se calcularon cuatro piezas de información que acá importan más que un ranking mecánico:</p>
+<p><span class="math display">\[
+\rho_s(X, TGF) = \operatorname{cor}\bigl(\operatorname{rank}(X), \operatorname{rank}(TGF)\bigr)
+\]</span></p>
+<p><span class="math display">\[
+R^2 = 1 - \frac{\sum_i r_i^2}{\sum_i (TGF_i - \overline{TGF})^2}
+\]</span></p>
+<p><span class="math display">\[
+I(r) = \frac{n}{S_0}
+\frac{\sum_i \sum_j w_{ij}(r_i - \bar r)(r_j - \bar r)}
+{\sum_i (r_i - \bar r)^2}
+\]</span></p>
+<p><span class="math display">\[
+\Delta I = I(TGF) - I(r)
+\]</span></p>
+<p>La primera resume la dirección y fuerza de la asociación monotónica sobre rangos. La segunda mide cuánta variación de la TGF absorbe la covariable en un modelo lineal simple, no cuál es su efecto causal. La tercera pregunta si, después de introducir la covariable, el mapa de residuos sigue teniendo estructura espacial. La cuarta resume cuánto cayó esa estructura espacial cuando se introdujo la covariable.</p>
+<p>En esta tesis, <span class="math inline">\(\rho_s\)</span> se lee como una correlación de rangos y <span class="math inline">\(I\)</span> como el índice global de Moran calculado con la misma matriz de pesos espaciales usada en el resto del análisis. Eso importa porque ambas métricas son sensibles a la forma del ordenamiento territorial, no sólo al valor crudo de la variable. Chi advierte precisamente que no conviene confundir una correlación alta con una variable “lista para entrar” al modelo: si dos candidatas expresan el mismo gradiente, la estimación termina repartiendo una sola pieza de información entre coeficientes distintos y pierde claridad interpretativa <span class="citation" data-cites="chi_spatial_2019">(<a href="#ref-chi_spatial_2019" role="doc-biblioref">Chi y Zhu 2019</a>)</span>.</p>
+<p>La concordancia LISA se revisó como apoyo exploratorio, pero no se convirtió en criterio rector. Es útil para mirar correspondencias locales entre clústeres, aunque depende demasiado del recorte, de la significación local y del ancho espacial elegido. Para la selección final, en cambio, la tesis prioriza una lectura más estable: asociación, ajuste, reducción del patrón espacial, persistencia entre censos y coherencia demográfica.</p>
+</section>
+<section id="núcleo-retenido-y-variables-excluidas" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="núcleo-retenido-y-variables-excluidas"><span class="header-section-number">2.3</span> Núcleo retenido y variables excluidas</h2>
+<div class="cell" data-layout-align="center">
+<div style="border: 1px solid #ddd; padding: 5px; overflow-x: scroll; width:100%; ">
+<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+Núcleo de covariables retenido para el modelo nacional de TGF
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Familia
+</th>
+<th style="text-align:left;">
+Variable
+</th>
+<th style="text-align:right;">
+Magnitud media de Spearman
+</th>
+<th style="text-align:right;">
+R² ajustado medio
+</th>
+<th style="text-align:right;">
+Reducción media del Moran residual
+</th>
+<th style="text-align:left;">
+Persistencia del signo
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Educación
+</td>
+<td style="text-align:left;">
+Proporción de mujeres 25-49 con nivel universitario o más
+</td>
+<td style="text-align:right;">
+0.610
+</td>
+<td style="text-align:right;">
+0.346
+</td>
+<td style="text-align:right;">
+0.143
+</td>
+<td style="text-align:left;">
+Sí
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Mercado laboral
+</td>
+<td style="text-align:left;">
+Proporción de mujeres 25-49 económicamente activas
+</td>
+<td style="text-align:right;">
+0.721
+</td>
+<td style="text-align:right;">
+0.529
+</td>
+<td style="text-align:right;">
+0.313
+</td>
+<td style="text-align:left;">
+Sí
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Salud y protección social
+</td>
+<td style="text-align:left;">
+Proporción de mujeres 15-49 con cobertura de salud
+</td>
+<td style="text-align:right;">
+0.640
+</td>
+<td style="text-align:right;">
+0.438
+</td>
+<td style="text-align:right;">
+0.249
+</td>
+<td style="text-align:left;">
+Sí
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Pobreza estructural
+</td>
+<td style="text-align:left;">
+Índice de privación estructural armonizado
+</td>
+<td style="text-align:right;">
+0.629
+</td>
+<td style="text-align:right;">
+0.434
+</td>
+<td style="text-align:right;">
+0.251
+</td>
+<td style="text-align:left;">
+Sí
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Condiciones materiales
+</td>
+<td style="text-align:left;">
+Proporción de mujeres 15-49 en hogares con computadora
+</td>
+<td style="text-align:right;">
+0.688
+</td>
+<td style="text-align:right;">
+0.507
+</td>
+<td style="text-align:right;">
+0.295
+</td>
+<td style="text-align:left;">
+Sí
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div style="border: 1px solid #ddd; padding: 5px; overflow-x: scroll; width:100%; ">
+<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+Variables alternativas o contextuales que no integran el núcleo principal
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Variable
+</th>
+<th style="text-align:left;">
+Rol
+</th>
+<th style="text-align:left;">
+Motivo
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+prop_educ_bajo_25_49
+</td>
+<td style="text-align:left;">
+Alternativa educativa
+</td>
+<td style="text-align:left;">
+Comparte el mismo gradiente que educación alta; incluir ambas variables vuelve la especificación redundante.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+prop_ocupadas_25_49
+</td>
+<td style="text-align:left;">
+Alternativa laboral
+</td>
+<td style="text-align:left;">
+Representa el mismo bloque que actividad femenina; se reserva como sensibilidad.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+indice_ses_compuesto
+</td>
+<td style="text-align:left;">
+Síntesis diagnóstica
+</td>
+<td style="text-align:left;">
+Resume piezas que ya están separadas en el núcleo; sirve para contraste, no para el modelo central.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+prop_nbi_oficial_15_49
+</td>
+<td style="text-align:left;">
+Pobreza alternativa
+</td>
+<td style="text-align:left;">
+Su correlación con la privación estructural es alta donde ambas están disponibles; aporta poca información adicional.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+prop_rural_15_49
+</td>
+<td style="text-align:left;">
+Contexto
+</td>
+<td style="text-align:left;">
+Es útil como recorte territorial, pero no define por sí mismo el mecanismo demográfico central.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+pbg_per_capita_provincial
+</td>
+<td style="text-align:left;">
+Contexto macro
+</td>
+<td style="text-align:left;">
+Funciona como control agregado, no como covariable de primera línea para la TGF.
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>La tabla de núcleo no hay que leerla como un ranking absoluto. La educación alta entra porque representa mejor el capital educativo femenino acumulado y porque su relación con la fecundidad es estable en los dos censos. La actividad económica femenina entra porque capta la inserción laboral en sentido amplio, antes de decidir si una mujer está ocupada o en transición. La cobertura de salud, la privación estructural y la computadora en el hogar cierran el triángulo material: acceso, vulnerabilidad y condiciones de vida. El índice NBI queda afuera no porque sea irrelevante, sino porque en la práctica se superpone demasiado con la privación estructural; donde ambos conviven, el modelo no gana una explicación nueva, sólo reparte la misma información entre dos etiquetas.</p>
+<p>Las variables excluidas no son “variables malas”. Son variables que, en esta tesis, cumplen otros papeles. Algunas funcionan como alternativas conceptuales; otras, como sensibilidad; otras, como control contextual. Mantener esa distinción importa porque evita dos errores simétricos: inflar el modelo con redundancias y expulsar de la discusión covariables que sí informan algo, aunque no deban entrar al núcleo principal.</p>
+<p>En el recorte regional la asimetría es todavía más fuerte. El bloque NOA y NEA, considerado en conjunto, no se parece a Gran Buenos Aires ni a CABA, y esa diferencia no es un detalle decorativo sino parte del fenómeno. En los recortes del norte, la fecundidad sigue más anclada en gradientes sociales y territoriales extensos; en el conurbano y en la ciudad, la variación queda más comprimida y el problema pasa a ser interno, casi intraurbano. El modelado siguiente tiene que respetar esa escala.</p>
+</section>
+<section id="flujo-de-cálculo-que-sigue-el-notebook" class="level2" data-number="2.4">
+<h2 data-number="2.4" class="anchored" data-anchor-id="flujo-de-cálculo-que-sigue-el-notebook"><span class="header-section-number">2.4</span> Flujo de cálculo que sigue el notebook</h2>
+<p>En términos computacionales, la secuencia es siempre la misma. Primero se ajusta, para cada censo y cada soporte territorial, una regresión lineal simple o múltiple por mínimos cuadrados ordinarios. Después se calculan los valores ajustados y los residuos observables. Con esos residuos se vuelve a calcular Moran para ver si la parte no explicada sigue organizada espacialmente. A partir de allí se comparan dos especificaciones espaciales globales, SAR y SEM, y finalmente se estima una GWR con kernel adaptativo para verificar si la intensidad de las asociaciones cambia al movernos por el territorio. Ese orden no es decorativo: es la forma de evitar que la regresión local aparezca antes de haber entendido qué parte del problema resuelve el modelo global y qué parte deja todavía sin absorber.</p>
+</section>
+</section>
+<section id="criterio-final-de-selección-de-variables" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Criterio final de selección de variables</h1>
+<section id="regla-general" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="regla-general"><span class="header-section-number">3.1</span> Regla general</h2>
+<p>La selección final no se apoya en una sola métrica. Chi y Zhu sugieren una secuencia de controles: teoría, exploración, colinealidad, ajuste global y diagnóstico espacial. La bibliografía demográfica reciente agrega una cautela que aquí es central: no conviene incluir al mismo tiempo variables que expresan el mismo gradiente social, porque el modelo termina repartiendo una sola pieza de información entre varios coeficientes y pierde claridad interpretativa <span class="citation" data-cites="chi_spatial_2008 chi_spatial_2019 herrera-gomez_variabilidad_2021 pardo_fertility_2025">(<a href="#ref-chi_spatial_2008" role="doc-biblioref">Chi y Zhu 2008</a>, <a href="#ref-chi_spatial_2019" role="doc-biblioref">2019</a>; <a href="#ref-herrera-gomez_variabilidad_2021" role="doc-biblioref">Herrera-Gómez y Cid 2021</a>; <a href="#ref-pardo_fertility_2025" role="doc-biblioref">Pardo et&nbsp;al. 2025</a>)</span>.</p>
+<p>Por eso, el criterio operativo queda así:</p>
+<ol type="1">
+<li><code>TGF</code> como resultado central.</li>
+<li>Un núcleo reducido de covariables que cubra familias distintas y no duplique mecanismos.</li>
+<li><code>PMF 40-44</code> como contraste de trayectoria casi completada.</li>
+<li><code>PMG</code> sólo como antecedente descriptivo e histórico ya cerrado.</li>
+</ol>
+<p>La consecuencia de ese criterio es un modelo principal con cinco familias claramente diferenciadas: educación alta, actividad femenina, cobertura de salud, privación estructural y condiciones materiales. La selección no intenta maximizar el número de predictores; intenta que cada predictor agregue algo que los otros no agregan. Dicho de otro modo: no buscamos un conjunto “más grande”, sino un conjunto que pueda explicarse sin redundancias y que, al mismo tiempo, siga teniendo sentido cuando lo miramos con los lentes de la demografía y del espacio.</p>
+<p>No se trata, entonces, de fijar un mismo set rígido e idéntico para todas las escalas, ni de abrir un modelo totalmente distinto en cada región. La tesis mantiene un núcleo común y lo recorta cuando una covariable pierde soporte efectivo, deja de ser interpretable o pasa a funcionar sólo como control contextual. Eso es exactamente lo que Chi recomienda cuando insiste en que la selección de variables debe ser anterior al modelo espacial y sensible tanto a la teoría como al soporte empírico disponible <span class="citation" data-cites="chi_spatial_2019">(<a href="#ref-chi_spatial_2019" role="doc-biblioref">Chi y Zhu 2019</a>)</span>. En síntesis: el criterio es compartido; la fórmula final puede cambiar por escala, pero la lógica de selección no.</p>
+</section>
+<section id="lo-que-se-mantiene-entre-argentina-y-las-regiones" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="lo-que-se-mantiene-entre-argentina-y-las-regiones"><span class="header-section-number">3.2</span> Lo que se mantiene entre Argentina y las regiones</h2>
+<p>El núcleo conceptual es el mismo en todo el país, pero no todas las variables sobreviven igual en todos los recortes. Formalmente, puede pensarse así:</p>
+<p><span class="math display">\[
+V_{\text{recorte}} = V_{\text{núcleo}} \setminus E_{\text{recorte}}
+\]</span></p>
+<p>donde <span class="math inline">\(E_{\text{recorte}}\)</span> recoge las variables que se excluyen porque pierden variación efectiva, dejan de ser interpretables o actúan sólo como controles contextuales. Esa regla es especialmente importante en CABA y en el Gran Buenos Aires: allí algunas covariables de ruralidad o de contexto provincial dejan de tener sentido sustantivo como parte del mecanismo principal. En otras palabras, la tesis conserva la misma familia explicativa, pero adapta su soporte a la escala territorial concreta.</p>
+<p>La tesis, entonces, no cambia de criterio al pasar de Argentina a las regiones. Cambia la tolerancia del territorio a cada pieza del modelo. Esa distinción vuelve la selección más honesta y más comparable con la recomendación de Chi de empezar con un conjunto amplio, reducir dimensión sin perder contenido y revisar después qué pasa en cada escala <span class="citation" data-cites="chi_spatial_2019">(<a href="#ref-chi_spatial_2019" role="doc-biblioref">Chi y Zhu 2019</a>)</span>.</p>
+</section>
+<section id="núcleo-común-y-exclusiones-por-escala" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="núcleo-común-y-exclusiones-por-escala"><span class="header-section-number">3.3</span> Núcleo común y exclusiones por escala</h2>
+<p>Conviene dejar una precisión sin ambigüedades: en este notebook, el núcleo final que entra al modelado es el mismo para Argentina y para las regiones, pero la lista efectiva de covariables puede recortarse cuando una pieza pierde variación útil o deja de ser interpretativamente defendible. Lo que cambia por escala no es la lógica de selección sino la tolerancia del territorio a ciertas covariables de contexto. En CABA, por ejemplo, la ruralidad deja de tener sentido sustantivo; en el Gran Buenos Aires, el PBG provincial agrega poco como mecanismo interno; en el bloque NOA y NEA, en cambio, el soporte territorial aún permite leer mejor varias piezas del gradiente social.</p>
+<p>La consecuencia es metodológicamente simple y demográficamente importante: no se fuerza la misma fórmula donde el espacio ya no la sostiene. Esa decisión no debilita el modelo; lo vuelve más fiel a la recomendación de Chi de partir de un conjunto amplio, mirar qué sobrevive y no confundir controles contextuales con parte del núcleo explicativo <span class="citation" data-cites="chi_spatial_2019">(<a href="#ref-chi_spatial_2019" role="doc-biblioref">Chi y Zhu 2019</a>)</span>.</p>
+</section>
+<section id="qué-entra-y-qué-queda-afuera" class="level2" data-number="3.4">
+<h2 data-number="3.4" class="anchored" data-anchor-id="qué-entra-y-qué-queda-afuera"><span class="header-section-number">3.4</span> Qué entra y qué queda afuera</h2>
+<p>Operativamente, esto significa que el modelo nacional y los modelos regionales no se seleccionan con criterios distintos: comparten la misma arquitectura de variables y se construyen a partir del mismo núcleo (<code>final_formula_vars</code>), pero en cada recorte regional se restan sólo las piezas que <code>scope_exclusions(scope_name)</code> vuelve inestables o poco interpretables. La diferencia, entonces, no está en la lógica de selección sino en la escala territorial donde esa lógica se aplica.</p>
+<p>En la práctica, el modelo nacional y los modelos regionales comparten la misma arquitectura conceptual para <code>TGF</code> y <code>PMF 40-44</code>. Lo que cambia son las exclusiones puntuales de cada recorte. Ese ajuste no reabre la tesis cada vez que cambia el mapa: simplemente evita que una covariable de contexto suplante un mecanismo que el territorio ya no ayuda a identificar. En otras palabras, la selección final es común; su aplicación es sensible a la escala.</p>
+</section>
+</section>
+<section id="marco-matemático-del-modelado" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Marco matemático del modelado</h1>
+<p>La forma base del problema es una regresión lineal por mínimos cuadrados ordinarios. Aquí la respuesta es la TGF, porque es la medida que mejor dialoga con el modelado espacial posterior:</p>
+<p><span class="math display">\[
+TGF_i = \alpha + \beta_1 X_{1i} + \beta_2 X_{2i} + \cdots + \beta_k X_{ki} + \varepsilon_i
+\]</span></p>
+<section id="notación-y-supuestos" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="notación-y-supuestos"><span class="header-section-number">4.1</span> Notación y supuestos</h2>
+<p>En esta notación, <span class="math inline">\(i\)</span> indexa departamentos, <span class="math inline">\(n\)</span> es el número de unidades efectivamente analizadas, <span class="math inline">\(X_{ji}\)</span> es la covariable <span class="math inline">\(j\)</span> en el departamento <span class="math inline">\(i\)</span>, <span class="math inline">\(\alpha\)</span> es la ordenada al origen, <span class="math inline">\(\beta_j\)</span> es el coeficiente asociado a cada covariable y <span class="math inline">\(\varepsilon_i\)</span> es el error no observable. El término no observable importa porque recoge todo lo que el modelo no llega a capturar: variables omitidas, relaciones no lineales, heterogeneidad no medida y ruido de observación <span class="citation" data-cites="clase_1_full">(<a href="#ref-clase_1_full" role="doc-biblioref">Bianco y Szretter Noste 2026</a>)</span>.</p>
+<p>La forma matricial es:</p>
+<p><span class="math display">\[
+\mathbf{y} = \mathbf{X}\boldsymbol{\beta} + \boldsymbol{\varepsilon}
+\]</span></p>
+<p>donde <span class="math inline">\(\mathbf{y}\)</span> es el vector de TGF observada, <span class="math inline">\(\mathbf{X}\)</span> la matriz de diseño, <span class="math inline">\(\boldsymbol{\beta}\)</span> el vector de parámetros y <span class="math inline">\(\boldsymbol{\varepsilon}\)</span> el vector de errores no observables. Los valores ajustados se escriben como</p>
+<p><span class="math display">\[
+\hat{\mathbf{y}} = \mathbf{X}\hat{\boldsymbol{\beta}} = \mathbf{P}\mathbf{y},
+\qquad
+\mathbf{r} = \mathbf{y} - \hat{\mathbf{y}} = (\mathbf{I}-\mathbf{P})\mathbf{y},
+\]</span></p>
+<p>donde <span class="math inline">\(\mathbf{P} = \mathbf{X}(\mathbf{X}^\top \mathbf{X})^{-1}\mathbf{X}^\top\)</span> es la matriz de proyección. Esa distinción es la que después permite hablar con precisión de error teórico no observable y de residuo observable una vez estimado el modelo <span class="citation" data-cites="clase_1_full">(<a href="#ref-clase_1_full" role="doc-biblioref">Bianco y Szretter Noste 2026</a>)</span>.</p>
+<p>Como <span class="math inline">\(\mathbf{P}\)</span> es simétrica e idempotente, los valores ajustados quedan en el espacio generado por las covariables y los residuos quedan ortogonales a ese espacio: <span class="math inline">\(\mathbf{X}^\top \mathbf{r} = \mathbf{0}\)</span>. En la notación de la clase, eso implica además que <span class="math inline">\(E(\hat{\mathbf{y}})=\mathbf{X}\boldsymbol{\beta}\)</span>, <span class="math inline">\(E(\mathbf{r})=\mathbf{0}\)</span>, <span class="math inline">\(\operatorname{Var}(\hat{\mathbf{y}})=\sigma^2\mathbf{P}\)</span>, <span class="math inline">\(\operatorname{Var}(\mathbf{r})=\sigma^2(\mathbf{I}-\mathbf{P})\)</span> y <span class="math inline">\(\operatorname{Cov}(\hat{\mathbf{y}}, \mathbf{r})=\mathbf{0}\)</span> <span class="citation" data-cites="clase_1_full">(<a href="#ref-clase_1_full" role="doc-biblioref">Bianco y Szretter Noste 2026</a>)</span>. Esa ortogonalidad es importante porque justifica mirar el residuo como la parte del fenómeno que quedó fuera del plano explicativo del modelo. Si ese residuo sigue ordenado en el espacio, la señal no absorbida no es ruido puro: todavía hay estructura territorial por explicar.</p>
+<p>El planteo clásico asume <span class="math inline">\(E(\boldsymbol{\varepsilon}\mid \mathbf{X}) = 0\)</span> y <span class="math inline">\(\operatorname{Var}(\boldsymbol{\varepsilon}\mid \mathbf{X}) = \sigma^2 \mathbf{I}\)</span>. En lenguaje llano: en promedio, el error no debe depender de las covariables, y su dispersión no debería cambiar de manera sistemática con ellas. Esas hipótesis no hacen “verdadero” al modelo, pero sí permiten interpretar correctamente sus estimadores <span class="citation" data-cites="clase_1_full">(<a href="#ref-clase_1_full" role="doc-biblioref">Bianco y Szretter Noste 2026</a>)</span>.</p>
+<p>El estimador por mínimos cuadrados ordinarios elige los parámetros que minimizan la suma de cuadrados residual:</p>
+<p><span class="math display">\[
+\hat{\boldsymbol{\beta}} = \arg\min_{\boldsymbol{\beta}} \sum_{i=1}^n (TGF_i - \alpha - \mathbf{x}_i^\top \boldsymbol{\beta})^2
+\]</span></p>
+<p>o, en forma cerrada,</p>
+<p><span class="math display">\[
+\hat{\boldsymbol{\beta}} = (\mathbf{X}^\top \mathbf{X})^{-1}\mathbf{X}^\top \mathbf{y}
+\]</span></p>
+<p>siempre que no exista colinealidad perfecta. Los valores ajustados son <span class="math inline">\(\hat{\mathbf{y}} = \mathbf{X}\hat{\boldsymbol{\beta}}\)</span> y los residuos observables se calculan como:</p>
+<p><span class="math display">\[
+r_i = TGF_i - \hat{TGF}_i
+\]</span></p>
+<p>Conviene separar esta notación con cuidado: <span class="math inline">\(\varepsilon_i\)</span> es el error teórico, no observable; <span class="math inline">\(r_i\)</span> es el residuo observable una vez que el modelo fue ajustado. Esa distinción es central. En una tesis de datos, no alcanza con que el código “corra”; hay que poder decir con precisión qué parte del fenómeno se supone y qué parte se observa después del ajuste.</p>
+<p>En regresión simple, la solución tiene una forma explícita:</p>
+<p><span class="math display">\[
+\hat{\beta}_1 = \frac{\sum_i (X_i - \overline{X})(TGF_i - \overline{TGF})}{\sum_i (X_i - \overline{X})^2}
+\]</span></p>
+<p><span class="math display">\[
+\hat{\beta}_0 = \overline{TGF} - \hat{\beta}_1 \overline{X}
+\]</span></p>
+<p>Esa expresión muestra que la pendiente no es un número arbitrario: resume cómo covarían la respuesta y la covariable, normalizado por la variabilidad de la covariable. Si <span class="math inline">\(X\)</span> sube y <span class="math inline">\(\hat{\beta}_1 &lt; 0\)</span>, la TGF esperada baja; si <span class="math inline">\(\hat{\beta}_1 &gt; 0\)</span>, la TGF esperada sube. Cuando las covariables son proporciones en escala <span class="math inline">\([0,1]\)</span>, un cambio de 0.10 equivale a diez puntos porcentuales, y esa es la escala correcta para leer magnitudes.</p>
+</section>
+<section id="cómo-leer-un-coeficiente" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="cómo-leer-un-coeficiente"><span class="header-section-number">4.2</span> Cómo leer un coeficiente</h2>
+<p>En el modelo global, cada <span class="math inline">\(\beta_j\)</span> se interpreta como un efecto promedio en toda Argentina, manteniendo constantes las demás covariables. La lectura sustantiva correcta no es individual sino territorial: si la inserción laboral femenina tiene coeficiente negativo, eso significa que los departamentos con mayor actividad femenina tienden, en promedio, a exhibir menor TGF una vez controlado el resto del núcleo. No es un enunciado causal sobre mujeres individuales; es una asociación espacial promedio entre un contexto y su intensidad reciente de fecundidad.</p>
+</section>
+<section id="modelos-espaciales-globales" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="modelos-espaciales-globales"><span class="header-section-number">4.3</span> Modelos espaciales globales</h2>
+<p>Si el patrón espacial residual sigue siendo fuerte, Chi recomienda pasar a modelos espaciales globales antes de saltar a GWR. La forma más simple de esos modelos es el autorregresivo espacial:</p>
+<p><span class="math display">\[
+TGF_i = \rho \sum_j w_{ij} TGF_j + X_i \beta + \varepsilon_i
+\]</span></p>
+<p>donde <span class="math inline">\(\rho\)</span> resume la dependencia de la fecundidad de cada departamento respecto de sus vecinos y <span class="math inline">\(w_{ij}\)</span> son los pesos espaciales. Si <span class="math inline">\(\rho &gt; 0\)</span>, departamentos con TGF alta tienden a estar rodeados por departamentos con TGF alta; si <span class="math inline">\(\rho &lt; 0\)</span>, el patrón local se alterna espacialmente.</p>
+<p>La alternativa de error espacial captura una dependencia distinta:</p>
+<p><span class="math display">\[
+TGF_i = X_i \beta + u_i, \qquad u_i = \lambda \sum_j w_{ij} u_j + \varepsilon_i
+\]</span></p>
+<p>En ese caso, <span class="math inline">\(\lambda\)</span> no gobierna la respuesta observada sino la estructura del error: lo que queda sin explicar sigue organizado geográficamente. SAR y SEM no responden a la misma pregunta. El primero mira dependencia en la respuesta; el segundo, dependencia en lo no explicado. Chi insiste en esa distinción porque son mecanismos distintos y porque una comparación seria de modelos espaciales necesita distinguirlos antes de elegir una especificación local <span class="citation" data-cites="chi_spatial_2008 chi_spatial_2019">(<a href="#ref-chi_spatial_2008" role="doc-biblioref">Chi y Zhu 2008</a>, <a href="#ref-chi_spatial_2019" role="doc-biblioref">2019</a>)</span>.</p>
+</section>
+<section id="gwr-como-descomposición-local" class="level2" data-number="4.4">
+<h2 data-number="4.4" class="anchored" data-anchor-id="gwr-como-descomposición-local"><span class="header-section-number">4.4</span> GWR como descomposición local</h2>
+<p>En GWR, esos coeficientes pasan a ser locales:</p>
+<p><span class="math display">\[
+TGF_i = \alpha(u_i, v_i) + \sum_{j=1}^k \beta_j(u_i, v_i) X_{ji} + \varepsilon_i
+\]</span></p>
+<p>donde <span class="math inline">\((u_i, v_i)\)</span> son las coordenadas del departamento. Ese salto es el corazón de la tesis: permite preguntar si la fuerza de cada covariable cambia al moverse por el territorio. El modelo no deja de ser una regresión; cambia la forma en que pondera los datos vecinos y convierte un único coeficiente en una superficie de coeficientes.</p>
+<p>En su forma estimada, GWR resuelve localmente</p>
+<p><span class="math display">\[
+\hat{\boldsymbol{\beta}}(u_i,v_i) = \left(\mathbf{X}^\top \mathbf{W}_i \mathbf{X}\right)^{-1}\mathbf{X}^\top \mathbf{W}_i \mathbf{y},
+\]</span></p>
+<p>donde <span class="math inline">\(\mathbf{W}_i\)</span> es una matriz diagonal de pesos que da más importancia a las observaciones cercanas al punto <span class="math inline">\(i\)</span>. Con kernel adaptativo, el ancho de banda no se interpreta como una distancia fija en kilómetros sino como una vecindad efectiva de observaciones: cuanto menor es el ancho de banda, más local es el ajuste; cuanto mayor, más se aproxima a un modelo global.</p>
+<p>Antes de llegar a GWR, sin embargo, hay un escalón metodológico inevitable. Primero hay que ajustar modelos globales por censo, revisar el ajuste, mirar los residuos y verificar si queda autocorrelación espacial. Si los residuos siguen organizados geográficamente, entonces la estructura territorial no quedó absorbida por el modelo y GWR deja de ser una extravagancia para convertirse en una herramienta razonable.</p>
+</section>
+</section>
+<section id="modelos-globales-sobre-argentina" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Modelos globales sobre Argentina</h1>
+<p>Antes de leer números conviene fijar el orden de lectura. Esta sección compara tres capas distintas pero encadenadas: el modelo lineal como línea de base, SAR/SEM como respuestas espaciales globales y GWR como descomposición local de la heterogeneidad que todavía persiste. Chi y Zhu no proponen saltar directamente al modelo local: piden mirar primero cuánto explica la especificación más simple, después revisar si el resto del mapa sigue organizado y recién ahí preguntar si la intensidad de los coeficientes cambia con el lugar <span class="citation" data-cites="chi_spatial_2008 chi_spatial_2019">(<a href="#ref-chi_spatial_2008" role="doc-biblioref">Chi y Zhu 2008</a>, <a href="#ref-chi_spatial_2019" role="doc-biblioref">2019</a>)</span>.</p>
+<section id="qué-significa-cada-columna" class="level3" data-number="5.0.1">
+<h3 data-number="5.0.1" class="anchored" data-anchor-id="qué-significa-cada-columna"><span class="header-section-number">5.0.1</span> Qué significa cada columna</h3>
+<p>Antes de leer la tabla conviene fijar una idea simple: cada columna responde una pregunta distinta y, por lo tanto, ninguna resume por sí sola todo el modelo. <code>N de territorios</code> pregunta cuántas unidades efectivamente quedaron en la muestra después del recorte territorial y de la depuración de información incompleta. <code>R² ajustado</code> pregunta cuánta variación de la TGF explica el bloque de covariables una vez penalizada la complejidad. <code>AIC del modelo lineal</code> pregunta si el ajuste obtenido compensa el costo de introducir parámetros. <code>Moran de residuos</code> pregunta si, después del ajuste, todavía queda orden espacial en lo no explicado. Y <code>p del Moran de residuos</code> resume cuánta evidencia hay contra la hipótesis nula de que esa autocorrelación residual sea compatible con la aleatoriedad espacial.</p>
+<p>A ese núcleo se suman dos contrastes espaciales globales (<code>AIC SAR (lag espacial)</code> y <code>AIC SEM (error espacial)</code>) y la síntesis local de GWR (<code>Ancho de banda adaptativo</code>, <code>AICc GWR (corregido)</code>, <code>R² local promedio</code>, <code>R² local mínimo</code> y <code>R² local máximo</code>). No conviene leerlos como si fueran equivalentes: cada uno pertenece a una pregunta distinta. <code>N de territorios</code> mira el tamaño efectivo de la muestra; <code>R² ajustado</code>, el balance entre ajuste y complejidad; <code>AIC</code>, el costo de agregar parámetros; <code>Moran</code> y su <code>p</code>, la persistencia o no de estructura espacial en lo no explicado; y la familia GWR, el grado en que una superficie local de coeficientes mejora la lectura del territorio.</p>
+<p>En la práctica, <code>N de territorios</code> no es un detalle contable. Si en TGF 2022 aparecen 527 observaciones, eso significa que 527 departamentos entraron efectivamente a la regresión después del recorte y del filtro de completitud. Si una especificación tiene menos unidades, no necesariamente es peor; puede estar respondiendo a un recorte territorial más estricto o a una covariable que no existe con la misma cobertura en todo el país.</p>
+<p><code>R² ajustado</code> resume cuánta variación de la TGF explica el ajuste lineal teniendo en cuenta la cantidad de parámetros estimados. Su forma usual es</p>
+<p><span class="math display">\[
+R^2_{\text{adj}} = 1 - \frac{n-1}{n-p}\left(1-R^2\right),
+\]</span></p>
+<p>donde <span class="math inline">\(n\)</span> es el número de observaciones y <span class="math inline">\(p\)</span> la cantidad total de parámetros, intercepto incluido. La corrección importa porque el <span class="math inline">\(R^2\)</span> bruto casi siempre sube cuando agregamos regresores, incluso si esos regresores no agregan un mecanismo nuevo. El <span class="math inline">\(R^2\)</span> ajustado intenta evitar precisamente esa ilusión de mejora mecánica.</p>
+<p><code>AIC del modelo lineal</code> compara ajuste y complejidad. En una regresión lineal puede escribirse como</p>
+<p><span class="math display">\[
+AIC = -2 \log L(\hat{\theta}) + 2p,
+\]</span></p>
+<p>donde <span class="math inline">\(L(\hat{\theta})\)</span> es la verosimilitud del modelo ajustado y <span class="math inline">\(p\)</span> es el número de parámetros estimados. Valores más bajos indican mejor equilibrio entre ajuste y complejidad, pero sólo deben compararse dentro del mismo resultado y la misma muestra. En otras palabras: si dos modelos se ajustan sobre los mismos departamentos y el mismo resultado, el de menor AIC suele ser preferible porque captura mejor la información sin pagar de más por complejidad.</p>
+<p><code>Moran de residuos</code> se calcula sobre los residuos observables <span class="math inline">\(r_i = TGF_i - \hat{TGF}_i\)</span> y responde si, una vez ajustado el modelo, sigue quedando estructura espacial en lo no explicado. El <code>p del Moran de residuos</code> no “demuestra” por sí solo que la autocorrelación exista; sólo cuantifica cuán incompatible es el valor observado con la hipótesis nula de ausencia de estructura espacial. Acá, además, la prueba se corre con alternativa unilateral a autocorrelación positiva, de modo que el valor de <span class="math inline">\(p\)</span> resume evidencia a favor de agrupamiento espacial y no de cualquier desvío respecto de la nulidad. <code>AIC SAR (lag espacial)</code> y <code>AIC SEM (error espacial)</code> permiten contrastar especificaciones espaciales globales: el primero mira dependencia en la respuesta, el segundo dependencia en el error estructurado. <code>Ancho de banda adaptativo</code>, <code>AICc GWR (corregido)</code> y <code>R² local promedio</code> resumen la versión local del modelo: cuán chico o grande es el vecindario utilizado, cuánto penaliza la complejidad local y cuán bien responde cada superficie local de coeficientes.</p>
+<p>En GWR, la corrección <span class="math inline">\(AICc\)</span> añade una penalización extra por tamaño muestral finito y, por eso, suele escribirse como</p>
+<p><span class="math display">\[
+AICc = AIC + \frac{2p(p+1)}{n-p-1},
+\]</span></p>
+<p>con <span class="math inline">\(p\)</span> como parámetro efectivo del modelo local. <code>R² local</code> no es un <span class="math inline">\(R^2\)</span> global desagregado sino una medida de ajuste local: se calcula en cada ubicación a partir de los pesos del kernel y luego puede resumirse con media, mínimo y máximo para describir cuán heterogéneo es el rendimiento espacial.</p>
+</section>
+<section id="ajuste-lineal-y-dependencia-espacial" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="ajuste-lineal-y-dependencia-espacial"><span class="header-section-number">5.1</span> Ajuste lineal y dependencia espacial</h2>
+<div class="cell" data-layout-align="center">
+<div style="border: 1px solid #ddd; padding: 5px; overflow-x: scroll; width:100%; ">
+<table class="table table-striped table-hover table-condensed caption-top table-sm small">
+<caption>Ajuste global lineal para Argentina</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">Censo</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Resultado</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">N de territorios</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">R² ajustado</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">AIC del modelo lineal</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">2010</td>
+<td style="text-align: left;">TGF</td>
+<td style="text-align: right;">523</td>
+<td style="text-align: right;">0.547</td>
+<td style="text-align: right;">337.157</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2022</td>
+<td style="text-align: left;">TGF</td>
+<td style="text-align: right;">527</td>
+<td style="text-align: right;">0.597</td>
+<td style="text-align: right;">-58.279</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2010</td>
+<td style="text-align: left;">PMF 40-44</td>
+<td style="text-align: right;">523</td>
+<td style="text-align: right;">0.791</td>
+<td style="text-align: right;">273.352</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2022</td>
+<td style="text-align: left;">PMF 40-44</td>
+<td style="text-align: right;">527</td>
+<td style="text-align: right;">0.779</td>
+<td style="text-align: right;">-40.339</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="cell" data-layout-align="center">
+<div style="border: 1px solid #ddd; padding: 5px; overflow-x: scroll; width:100%; ">
+<table class="table table-striped table-hover table-condensed caption-top table-sm small">
+<caption>Diagnóstico espacial comparado para Argentina</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">Censo</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Resultado</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Moran de residuos</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">p del Moran de residuos</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">AIC SAR (lag espacial)</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">AIC SEM (error espacial)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">2010</td>
+<td style="text-align: left;">TGF</td>
+<td style="text-align: right;">0.261</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">253.132</td>
+<td style="text-align: right;">258.845</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2022</td>
+<td style="text-align: left;">TGF</td>
+<td style="text-align: right;">0.254</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">-138.230</td>
+<td style="text-align: right;">-125.636</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2010</td>
+<td style="text-align: left;">PMF 40-44</td>
+<td style="text-align: right;">0.391</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">146.775</td>
+<td style="text-align: right;">105.571</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2022</td>
+<td style="text-align: left;">PMF 40-44</td>
+<td style="text-align: right;">0.252</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">-85.091</td>
+<td style="text-align: right;">-113.772</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<section id="tgf-ajuste-global-y-estructura-espacial-residual" class="level3" data-number="5.1.1">
+<h3 data-number="5.1.1" class="anchored" data-anchor-id="tgf-ajuste-global-y-estructura-espacial-residual"><span class="header-section-number">5.1.1</span> TGF: ajuste global y estructura espacial residual</h3>
+<p>En TGF 2010 el ajuste lineal explica una fracción importante de la variación territorial, pero no la disuelve. El <span class="math inline">\(R^2\)</span> ajustado queda en 0.547, el AIC del modelo lineal en 337.157 y el Moran de residuos en 0.261. Eso quiere decir que el bloque de covariables ya organiza buena parte del mapa, aunque todavía queda una estructura espacial clara en lo no explicado. Cuando se pasa a SAR y SEM, la comparación favorece a SAR, con AIC 253.132 frente a 258.845, lo que sugiere que en ese corte la dependencia está más cerca de la respuesta observada que del error estructurado. La GWR baja todavía un poco más el criterio corregido de información y llega a un <span class="math inline">\(R^2\)</span> local promedio de 0.607, con un rango que va de 0.188 a 0.927. La lectura no es que la GWR “gana” en abstracto: es que revela una heterogeneidad espacial que el modelo global no podía mostrar.</p>
+<p>En TGF 2022 la historia es parecida, pero con un ajuste algo mejor. El <span class="math inline">\(R^2\)</span> ajustado sube a 0.597, el AIC del modelo lineal baja a -58.279 y el Moran de residuos sigue en 0.254. El contraste espacial vuelve a favorecer a SAR, con AIC -138.230 frente a -125.636 para SEM. La GWR, nuevamente, mejora la lectura local y deja un <span class="math inline">\(R^2\)</span> local promedio de 0.579, con una dispersión todavía amplia entre departamentos. En términos demográficos, esto sugiere que la fecundidad reciente sigue estando muy asociada a gradientes sociales y materiales, pero la intensidad de esa asociación cambia según el territorio.</p>
+</section>
+<section id="pmf-40-44-una-trayectoria-casi-completada" class="level3" data-number="5.1.2">
+<h3 data-number="5.1.2" class="anchored" data-anchor-id="pmf-40-44-una-trayectoria-casi-completada"><span class="header-section-number">5.1.2</span> PMF 40-44: una trayectoria casi completada</h3>
+<p>La PMF 40-44 muestra un ajuste global más alto que la TGF, lo cual era esperable porque resume una trayectoria más acumulada y menos expuesta a oscilaciones recientes. En 2010, el <span class="math inline">\(R^2\)</span> ajustado alcanza 0.791 y el Moran de residuos queda en 0.391. Eso quiere decir que el bloque explicativo captura mucho de la PMF, pero el patrón espacial residual es fuerte. En esta versión, SEM mejora más que SAR en términos de AIC, lo que sugiere que buena parte de la estructura remanente se concentra en el error no observado. La GWR, por su parte, lleva el <span class="math inline">\(R^2\)</span> local promedio a 0.817, con una superficie local muy ordenada y un rango amplio entre departamentos.</p>
+<p>En 2022 el cuadro se mantiene: <span class="math inline">\(R^2\)</span> ajustado de 0.779, Moran de residuos de 0.252, AIC del modelo lineal de -40.339 y GWR con <span class="math inline">\(R^2\)</span> local promedio de 0.820. Aquí SEM vuelve a mejorar algo más que SAR, con AIC -113.772 frente a -85.091. La lectura demográfica es clara: la PMF 40-44 está más sedimentada territorialmente que la TGF, por eso el ajuste global parece más alto y la GWR muestra superficies locales más fuertes. Justamente por eso la PMF sirve como contraste y no como objetivo principal: muestra una fecundidad más “cerrada”, mientras que la TGF conserva mejor la intensidad reciente que esta tesis quiere explicar.</p>
+</section>
+<section id="qué-dice-la-comparación-entre-tgf-y-pmf" class="level3" data-number="5.1.3">
+<h3 data-number="5.1.3" class="anchored" data-anchor-id="qué-dice-la-comparación-entre-tgf-y-pmf"><span class="header-section-number">5.1.3</span> Qué dice la comparación entre TGF y PMF</h3>
+<p>La comparación entre TGF y PMF 40-44 no es un simple cotejo de métricas. TGF es más útil para el modelado central porque registra con mayor fidelidad la fecundidad reciente, que es el fenómeno que queremos explicar en su dimensión territorial más contemporánea. PMF 40-44, en cambio, muestra que el mismo bloque de covariables también dialoga con una medida de trayectoria casi completada y, en algunos sentidos, más estable espacialmente. Dicho de otro modo: TGF pregunta por la intensidad reciente; PMF 40-44, por la acumulación ya casi cerrada. La tesis necesita ambas para no confundir periodo con cohorte, pero el modelo principal se construye sobre TGF porque es allí donde el espacio contemporáneo todavía deja la huella más útil para el análisis.</p>
+<p>Visto de otro modo, el modelo lineal funciona como línea de base. SAR pregunta si una unidad territorial está afectada por lo que sucede en sus vecinas; por eso su parámetro espacial <span class="math inline">\(\rho\)</span> actúa sobre la respuesta observada y necesita una matriz de pesos <span class="math inline">\(W = [w_{ij}]\)</span>, usualmente estandarizada por filas, para formalizar quién cuenta como vecino y cuánto cuenta cada vecino. SEM pregunta si el problema está en factores omitidos que siguen un patrón espacial; por eso su parámetro <span class="math inline">\(\lambda\)</span> actúa sobre el error estructurado. Ambas especificaciones pueden bajar el AIC y aun así dejar una señal residual organizada; por eso la tesis no las trata como una competencia de software, sino como una forma de distinguir mecanismos. Si el ajuste mejora pero el Moran residual sigue alto, el modelo está corrigiendo parte del problema, pero no lo suficiente como para afirmar que la geografía quedó absorbida. El p-valor del Moran residual, en ese contexto, no “prueba” que haya autocorrelación: sólo cuantifica cuán incompatible es el residuo observado con la hipótesis de ausencia de estructura espacial.</p>
+<p>Leída fila por fila, la tabla permite un diagnóstico más fino. En TGF 2010 y 2022 el ajuste global ya es razonable, pero el residuo sigue espacialmente organizado: la regresión captura una parte importante del gradiente, aunque no desarma del todo la geografía del resultado. Entre SAR y SEM, la comparación no debe leerse como una batalla mecánica de criterios de información sino como una pista sobre el mecanismo dominante: en TGF, el ajuste favorece la dependencia directa en la respuesta; en PMF 40-44, el error estructurado llega a organizar mejor lo que queda sin explicar. Esa diferencia importa porque sugiere que la fecundidad reciente y la fecundidad casi completada no siguen exactamente la misma geometría territorial.</p>
+<p>En términos operativos, la tabla de coeficientes responde otra pregunta: cuánto cambia la TGF esperada cuando una covariable se mueve una unidad, manteniendo constantes las demás. Eso no convierte al modelo en causal, pero sí lo vuelve interpretable. Si el coeficiente de una proporción es negativo, el signo se lee como asociación inversa; si es positivo, como asociación directa. La magnitud importa siempre en la escala real de la variable, y por eso conviene pensar en cambios de diez puntos porcentuales y no en variaciones abstractas de una unidad completa. En la tabla de coeficientes, <code>estimate</code> es la pendiente estimada, <code>std.error</code> mide la incertidumbre de esa pendiente, <code>statistic</code> es el cociente entre ambas, <code>p.value</code> resume cuán compatible es el dato con la hipótesis nula de coeficiente igual a cero y los límites <code>conf.low</code> / <code>conf.high</code> fijan un intervalo de confianza para la pendiente.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<table class="table table-striped table-hover table-condensed caption-top table-sm small">
+<caption>Coeficientes del modelo global TGF 2022</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">term</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">estimate</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">std.error</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">statistic</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">p.value</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">conf.low</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">conf.high</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">prop_educ_univ_25_49</td>
+<td style="text-align: right;">-0.1920</td>
+<td style="text-align: right;">0.1731</td>
+<td style="text-align: right;">-1.1094</td>
+<td style="text-align: right;">0.2678</td>
+<td style="text-align: right;">-0.5321</td>
+<td style="text-align: right;">0.1480</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">prop_activas_25_49</td>
+<td style="text-align: right;">-1.7701</td>
+<td style="text-align: right;">0.2198</td>
+<td style="text-align: right;">-8.0521</td>
+<td style="text-align: right;">0.0000</td>
+<td style="text-align: right;">-2.2020</td>
+<td style="text-align: right;">-1.3382</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">prop_cobertura_15_49</td>
+<td style="text-align: right;">-0.4367</td>
+<td style="text-align: right;">0.1431</td>
+<td style="text-align: right;">-3.0507</td>
+<td style="text-align: right;">0.0024</td>
+<td style="text-align: right;">-0.7179</td>
+<td style="text-align: right;">-0.1555</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">indice_privacion_estructural</td>
+<td style="text-align: right;">-0.3207</td>
+<td style="text-align: right;">0.2010</td>
+<td style="text-align: right;">-1.5959</td>
+<td style="text-align: right;">0.1111</td>
+<td style="text-align: right;">-0.7155</td>
+<td style="text-align: right;">0.0741</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">prop_computadora_15_49</td>
+<td style="text-align: right;">-0.3277</td>
+<td style="text-align: right;">0.2074</td>
+<td style="text-align: right;">-1.5797</td>
+<td style="text-align: right;">0.1148</td>
+<td style="text-align: right;">-0.7352</td>
+<td style="text-align: right;">0.0798</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<section id="cómo-leer-los-coeficientes" class="level3" data-number="5.1.4">
+<h3 data-number="5.1.4" class="anchored" data-anchor-id="cómo-leer-los-coeficientes"><span class="header-section-number">5.1.4</span> Cómo leer los coeficientes</h3>
+<p>Los coeficientes de la regresión se leen en escala ceteris paribus. En la tabla de 2022, por ejemplo, el coeficiente de <code>prop_activas_25_49</code> es fuertemente negativo y estadísticamente claro: una mayor inserción laboral femenina se asocia con menor TGF, manteniendo constante el resto del núcleo. Un aumento de diez puntos porcentuales en esa proporción equivale, en el orden de magnitud del coeficiente, a una caída de aproximadamente 0.177 hijos por mujer. <code>prop_cobertura_15_49</code> también aparece con signo negativo y significativo, mientras que <code>prop_educ_univ_25_49</code>, <code>indice_privacion_estructural</code> y <code>prop_computadora_15_49</code> conservan el signo esperado pero con distinta fuerza estadística. Esa mezcla es útil porque muestra que el ajuste no depende de una sola pieza del gradiente social, sino de un bloque de mecanismos que dialogan entre sí.</p>
+</section>
+<section id="qué-hace-el-flujo-computacional" class="level3" data-number="5.1.5">
+<h3 data-number="5.1.5" class="anchored" data-anchor-id="qué-hace-el-flujo-computacional"><span class="header-section-number">5.1.5</span> Qué hace el flujo computacional</h3>
+<p>En términos de implementación, el recorrido es este: primero se arma una base depurada por censo y recorte; después se ajusta <code>lm()</code> con el núcleo de covariables; luego se calculan los residuos; luego se aplica Moran sobre esos residuos con la misma matriz de pesos espaciales; después se comparan SAR y SEM; y por último se estima GWR con búsqueda de ancho de banda adaptativo. La lectura final no depende de una sola estadística sino de la coherencia entre ajuste, coeficientes, residuos y estructura espacial.</p>
+</section>
+</section>
+</section>
+<section id="gwr-sobre-argentina" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> GWR sobre Argentina</h1>
+<p>La regresión geográficamente ponderada no reemplaza al modelo global; lo descompone para mirar heterogeneidad espacial. En vez de un único <span class="math inline">\(\beta_j\)</span>, estima una superficie de coeficientes locales <span class="math inline">\(\beta_j(u,v)\)</span> ponderando más a las observaciones cercanas a cada departamento. Chi y Zhu tratan GWR como una herramienta para explorar no estacionariedad después de haber revisado el ajuste global y los residuos, no como un atajo para evitar ese paso <span class="citation" data-cites="chi_spatial_2008 chi_spatial_2019">(<a href="#ref-chi_spatial_2008" role="doc-biblioref">Chi y Zhu 2008</a>, <a href="#ref-chi_spatial_2019" role="doc-biblioref">2019</a>)</span>. En términos intuitivos, GWR responde una pregunta muy concreta: ¿una covariable pesa igual en CABA que en el norte grande, o la intensidad de su asociación cambia cuando nos movemos por el territorio? Como cada ubicación estima sus propios coeficientes y sus propios errores, los contrastes locales deben leerse como diagnósticos de heterogeneidad, no como una batería de pruebas independientes con la misma autoridad que un único test global. Esa cautela es parte del motivo por el cual Chi presenta GWR como una herramienta exploratoria y no como una sustitución automática de la regresión global <span class="citation" data-cites="chi_spatial_2019">(<a href="#ref-chi_spatial_2019" role="doc-biblioref">Chi y Zhu 2019</a>)</span>.</p>
+<p>En forma operativa, cada punto del territorio resuelve una regresión local con pesos decrecientes según la distancia:</p>
+<p><span class="math display">\[
+w_{ij} = \left(1 - \left(\frac{d_{ij}}{b_i}\right)^2\right)^2 \;\; \text{si } d_{ij} &lt; b_i,\qquad 0 \;\; \text{si } d_{ij} \ge b_i
+\]</span></p>
+<p>donde <span class="math inline">\(d_{ij}\)</span> es la distancia entre los departamentos <span class="math inline">\(i\)</span> y <span class="math inline">\(j\)</span>, y <span class="math inline">\(b_i\)</span> es el ancho de banda local. Cuando el kernel es adaptativo, <span class="math inline">\(b_i\)</span> no es una distancia fija sino la escala que deja dentro de la ventana a una fracción efectiva de vecinos. Ese detalle importa porque, en una malla territorial desigual, un mismo radio físico no representa la misma cantidad de información en todo el país. Por eso, una asociación local puede verse más abrupta en un área densamente poblada y más suave en una región extensa: no porque cambie la definición del fenómeno, sino porque cambia la vecindad efectiva con la que cada punto se estima.</p>
+<section id="qué-significa-el-ancho-de-banda" class="level3" data-number="6.0.1">
+<h3 data-number="6.0.1" class="anchored" data-anchor-id="qué-significa-el-ancho-de-banda"><span class="header-section-number">6.0.1</span> Qué significa el ancho de banda</h3>
+<p>En una GWR con kernel adaptativo, el ancho de banda no se lee como una distancia fija en kilómetros sino como una vecindad efectiva que define cuántos datos locales participan en cada estimación. Un ancho de banda pequeño obliga al modelo a mirar un entorno muy cercano y, por tanto, deja que los coeficientes cambien con más libertad; uno grande suaviza esa variación y acerca la GWR a un modelo global. Matemáticamente, cada ubicación resuelve su propio problema de mínimos cuadrados con una matriz de pesos distinta: la información cercana pesa más que la lejana y, por eso, el coeficiente deja de ser único para el país y pasa a ser una función del espacio. El <code>R² local promedio</code> no es un <code>R²</code> global dividido por regiones; es el ajuste que se obtiene en cada ubicación con su vecindad efectiva, y por eso su media, su mínimo y su máximo describen cuán heterogéneo es el rendimiento espacial del modelo. En la práctica, los anchos de banda estimados para Argentina aquí se mueven en fracciones pequeñas de la muestra, lo que equivale a ventanas locales relativamente estrechas. <code>AICc GWR (corregido)</code> resume el compromiso entre ajuste y complejidad local: cuanto menor es, mejor equilibrio logra el modelo dentro de la misma muestra y el mismo resultado. En la búsqueda automática del ancho de banda, la versión corregida del criterio de información funciona como penalización extra cuando la muestra efectiva se vuelve chica.</p>
+<div class="cell" data-layout-align="center">
+<div style="border: 1px solid #ddd; padding: 5px; overflow-x: scroll; width:100%; ">
+<table class="table table-striped table-hover table-condensed caption-top table-sm small">
+<caption>Síntesis operativa de GWR sobre Argentina</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">Censo</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Resultado</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Ancho de banda adaptativo</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">AICc GWR (corregido)</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Notas</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">2010</td>
+<td style="text-align: left;">TGF</td>
+<td style="text-align: right;">0.029</td>
+<td style="text-align: right;">253.058</td>
+<td style="text-align: left;">Estimado con kernel adaptativo</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2022</td>
+<td style="text-align: left;">TGF</td>
+<td style="text-align: right;">0.059</td>
+<td style="text-align: right;">-145.109</td>
+<td style="text-align: left;">Estimado con kernel adaptativo</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2010</td>
+<td style="text-align: left;">PMF 40-44</td>
+<td style="text-align: right;">0.016</td>
+<td style="text-align: right;">122.674</td>
+<td style="text-align: left;">Estimado con kernel adaptativo</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2022</td>
+<td style="text-align: left;">PMF 40-44</td>
+<td style="text-align: right;">0.026</td>
+<td style="text-align: right;">-198.143</td>
+<td style="text-align: left;">Estimado con kernel adaptativo</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="cell" data-layout-align="center">
+<div style="border: 1px solid #ddd; padding: 5px; overflow-x: scroll; width:100%; ">
+<table class="table table-striped table-hover table-condensed caption-top table-sm small">
+<caption>Rendimiento local del modelo GWR sobre Argentina</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">Censo</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Resultado</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">R² local promedio</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">R² local mínimo</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">R² local máximo</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">2010</td>
+<td style="text-align: left;">TGF</td>
+<td style="text-align: right;">0.607</td>
+<td style="text-align: right;">0.188</td>
+<td style="text-align: right;">0.927</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2022</td>
+<td style="text-align: left;">TGF</td>
+<td style="text-align: right;">0.579</td>
+<td style="text-align: right;">0.345</td>
+<td style="text-align: right;">0.881</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2010</td>
+<td style="text-align: left;">PMF 40-44</td>
+<td style="text-align: right;">0.817</td>
+<td style="text-align: right;">0.397</td>
+<td style="text-align: right;">0.982</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2022</td>
+<td style="text-align: left;">PMF 40-44</td>
+<td style="text-align: right;">0.820</td>
+<td style="text-align: right;">0.453</td>
+<td style="text-align: right;">0.987</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<section id="qué-dicen-los-resultados-nacionales" class="level3" data-number="6.0.2">
+<h3 data-number="6.0.2" class="anchored" data-anchor-id="qué-dicen-los-resultados-nacionales"><span class="header-section-number">6.0.2</span> Qué dicen los resultados nacionales</h3>
+<p>La tabla operativa de GWR resume tres cosas a la vez: el ancho de banda adaptativo, que dice cuánta vecindad entra en cada ajuste local; el <code>AICc</code>, que penaliza complejidad en muestras finitas; y el <code>R² local promedio</code>, que describe cuán bien responde cada superficie de coeficientes en su propio entorno. No hay que leerla como un ranking automático de “ganadores” y “perdedores”: su función es mostrar si la relación entre fecundidad y covariables mantiene un comportamiento homogéneo o si cambia bastante según el lugar. Dicho de forma simple: si el coeficiente local de educación alta es fuerte en una región y más débil en otra, GWR no inventa dos teorías distintas; muestra que la misma asociación opera con intensidades diferentes según la vecindad. En esta tesis eso es útil porque permite distinguir entre una covariable que explica bien la fecundidad reciente en casi todo el país y otra que sólo funciona con fuerza en ciertas áreas. La primera viaja mejor hacia el modelo final; la segunda obliga a pensar un soporte regional específico. El valor de <code>R² local promedio</code> no se interpreta como probabilidad ni como prueba de validez; es un resumen de ajuste local. Si su promedio es alto pero su mínimo sigue bajo, eso indica que el modelo funciona en promedio pero encuentra bolsillos territoriales donde la explicación pierde fuerza.</p>
+<p>En TGF 2010, la GWR logra un promedio local de <span class="math inline">\(R^2\)</span> alto y una dispersión amplia entre departamentos: eso sugiere que el bloque de covariables funciona bien en promedio, pero no con la misma intensidad en todo el país. En 2022, la media local baja un poco y el rango sigue siendo ancho; la no estacionariedad persiste, aunque con un mapa algo menos extremo. En PMF 40-44, en cambio, la superficie local queda todavía más ajustada: no porque el fenómeno sea más simple, sino porque resume una trayectoria más acumulada y espacialmente muy ordenada. Dicho de otro modo: TGF es más sensible a la fecundidad reciente; PMF 40-44, a la historia ya sedimentada. Por eso GWR aquí no debe leerse como un “mejor modelo” en abstracto, sino como la evidencia de que el patrón espacial sigue activo incluso después del ajuste global.</p>
+</section>
+</section>
+<section id="extensión-regional" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Extensión regional</h1>
+<p>La extensión regional no busca repetir Argentina con fronteras más chicas. Busca ver dónde el modelo general sigue funcionando y dónde empieza a perder poder explicativo. Por eso el recorte se hace en tres sistemas que, por tamaño, composición y estructura territorial, no pueden leerse igual: <strong>NOA y NEA</strong> como bloque macroregional norte, <strong>Gran Buenos Aires</strong> y <strong>CABA</strong>. Cada uno tiene su propia vecindad, su propia escala y su propia tolerancia a la heterogeneidad local.</p>
+<p>El núcleo de variables es el mismo que en el modelo nacional, pero eso no significa que la fórmula regional tenga que copiarse sin cambios. En cada recorte se eliminan las covariables que dejan de ser interpretables, pierden variación efectiva o pasan a ser meros controles contextuales. Esa es la misma lógica de selección que Chi propone para el caso espacial: empezar amplio, mirar qué sobrevive y recién entonces fijar la especificación <span class="citation" data-cites="chi_spatial_2019">(<a href="#ref-chi_spatial_2019" role="doc-biblioref">Chi y Zhu 2019</a>)</span>. En concreto, no se fuerza <code>prop_rural_15_49</code> en CABA, y <code>pbg_per_capita_provincial</code> deja de tener sentido operativo en los recortes metropolitanos donde la referencia provincial ya no describe el mecanismo interno que interesa modelar. La exclusión no es un capricho de escala: cuando una covariable queda casi constante, su varianza disponible para explicar diferencias territoriales se achica y la estimación local pierde capacidad discriminante. El punto importante es que la misma arquitectura conceptual se mantiene, pero la forma exacta de la fórmula se adapta a la escala donde todavía hay variación significativa.</p>
+<p>Acá conviene ser especialmente explícitos: esta sección no vuelve a hacer el screening de covariables. Esa etapa ya quedó resuelta en los notebooks 2 y 3. Lo que se hace ahora es reestimar el modelo final, con la misma familia de variables, sobre distintos soportes territoriales. El interés es ver si el modelo nacional transporta bien su estructura a cada región o si el territorio obliga a reinterpretar su comportamiento.</p>
+<div class="cell" data-layout-align="center">
+<section id="noa-y-nea" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="noa-y-nea"><span class="header-section-number">7.1</span> NOA y NEA</h2>
+<section id="ajuste-global-y-dependencia-espacial" class="level3" data-number="7.1.1">
+<h3 data-number="7.1.1" class="anchored" data-anchor-id="ajuste-global-y-dependencia-espacial"><span class="header-section-number">7.1.1</span> Ajuste global y dependencia espacial</h3>
+<p>En NOA y NEA, los modelos globales muestran que la TGF y la PMF 40-44 comparten el mismo andamiaje conceptual, pero no siempre el mismo grado de ajuste ni la misma intensidad espacial. La tabla siguiente separa el bloque lineal de los diagnósticos espaciales globales para evitar una lectura mecánica y deja explícito qué parte del rendimiento proviene del ajuste global y cuál de la estructura residual. En esta sección, por lo tanto, la comparación no es entre ‘modelos distintos’ sino entre la misma arquitectura aplicada a un soporte territorial más chico.</p>
+<div style="border: 1px solid #ddd; padding: 5px; overflow-x: scroll; width:100%; ">
+<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+Ajuste global y dependencia residual para NOA y NEA
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Censo
+</th>
+<th style="text-align:left;">
+Resultado
+</th>
+<th style="text-align:right;">
+N de territorios
+</th>
+<th style="text-align:right;">
+R² ajustado
+</th>
+<th style="text-align:right;">
+AIC del modelo lineal
+</th>
+<th style="text-align:right;">
+Moran de residuos
+</th>
+<th style="text-align:right;">
+p del Moran de residuos
+</th>
+<th style="text-align:right;">
+AIC SAR (lag espacial)
+</th>
+<th style="text-align:right;">
+AIC SEM (error espacial)
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+2010
+</td>
+<td style="text-align:left;">
+TGF
+</td>
+<td style="text-align:right;">
+193
+</td>
+<td style="text-align:right;">
+0.485
+</td>
+<td style="text-align:right;">
+175.790
+</td>
+<td style="text-align:right;">
+0.214
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+151.101
+</td>
+<td style="text-align:right;">
+155.628
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2010
+</td>
+<td style="text-align:left;">
+PMF 40-44
+</td>
+<td style="text-align:right;">
+193
+</td>
+<td style="text-align:right;">
+0.605
+</td>
+<td style="text-align:right;">
+164.318
+</td>
+<td style="text-align:right;">
+0.302
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+143.431
+</td>
+<td style="text-align:right;">
+117.251
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2022
+</td>
+<td style="text-align:left;">
+TGF
+</td>
+<td style="text-align:right;">
+193
+</td>
+<td style="text-align:right;">
+0.413
+</td>
+<td style="text-align:right;">
+16.791
+</td>
+<td style="text-align:right;">
+0.204
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+-5.422
+</td>
+<td style="text-align:right;">
+0.299
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2022
+</td>
+<td style="text-align:left;">
+PMF 40-44
+</td>
+<td style="text-align:right;">
+193
+</td>
+<td style="text-align:right;">
+0.627
+</td>
+<td style="text-align:right;">
+51.778
+</td>
+<td style="text-align:right;">
+0.278
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+34.166
+</td>
+<td style="text-align:right;">
+17.279
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="síntesis-gwr-del-recorte" class="level3" data-number="7.1.2">
+<h3 data-number="7.1.2" class="anchored" data-anchor-id="síntesis-gwr-del-recorte"><span class="header-section-number">7.1.2</span> Síntesis GWR del recorte</h3>
+<div style="border: 1px solid #ddd; padding: 5px; overflow-x: scroll; width:100%; ">
+<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+Síntesis GWR para NOA y NEA
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Censo
+</th>
+<th style="text-align:left;">
+Resultado
+</th>
+<th style="text-align:right;">
+Ancho de banda adaptativo
+</th>
+<th style="text-align:right;">
+AICc GWR (corregido)
+</th>
+<th style="text-align:right;">
+R² local promedio
+</th>
+<th style="text-align:right;">
+R² local mínimo
+</th>
+<th style="text-align:right;">
+R² local máximo
+</th>
+<th style="text-align:left;">
+Nota
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+2010
+</td>
+<td style="text-align:left;">
+TGF
+</td>
+<td style="text-align:right;">
+0.052
+</td>
+<td style="text-align:right;">
+179.680
+</td>
+<td style="text-align:right;">
+0.692
+</td>
+<td style="text-align:right;">
+0.327
+</td>
+<td style="text-align:right;">
+0.811
+</td>
+<td style="text-align:left;">
+Modelo estimado
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2010
+</td>
+<td style="text-align:left;">
+PMF 40-44
+</td>
+<td style="text-align:right;">
+0.054
+</td>
+<td style="text-align:right;">
+129.902
+</td>
+<td style="text-align:right;">
+0.793
+</td>
+<td style="text-align:right;">
+0.665
+</td>
+<td style="text-align:right;">
+0.884
+</td>
+<td style="text-align:left;">
+Modelo estimado
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2022
+</td>
+<td style="text-align:left;">
+TGF
+</td>
+<td style="text-align:right;">
+0.067
+</td>
+<td style="text-align:right;">
+5.205
+</td>
+<td style="text-align:right;">
+0.562
+</td>
+<td style="text-align:right;">
+0.353
+</td>
+<td style="text-align:right;">
+0.861
+</td>
+<td style="text-align:left;">
+Modelo estimado
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2022
+</td>
+<td style="text-align:left;">
+PMF 40-44
+</td>
+<td style="text-align:right;">
+0.052
+</td>
+<td style="text-align:right;">
+-0.789
+</td>
+<td style="text-align:right;">
+0.831
+</td>
+<td style="text-align:right;">
+0.683
+</td>
+<td style="text-align:right;">
+0.924
+</td>
+<td style="text-align:left;">
+Modelo estimado
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="lectura-demográfica-del-recorte" class="level3" data-number="7.1.3">
+<h3 data-number="7.1.3" class="anchored" data-anchor-id="lectura-demográfica-del-recorte"><span class="header-section-number">7.1.3</span> Lectura demográfica del recorte</h3>
+<p>En NOA y NEA, TGF 2022 trabaja con n = 193, R² ajustado = 0,413, Moran de residuos = 0,204, p del Moran de residuos = 0,000, ancho de banda adaptativo = 0,067, AICc GWR (corregido) = 5,205, y R² local promedio = 0,562. PMF 40-44 2022, por su parte, llega a n = 193, R² ajustado = 0,627, Moran de residuos = 0,278, p del Moran de residuos = 0,000, ancho de banda adaptativo = 0,052, AICc GWR (corregido) = -0,789, y R² local promedio = 0,831. La comparación no establece una jerarquía abstracta; muestra que la TGF conserva mejor la pregunta de fecundidad reciente, mientras que la PMF 40-44 condensa una trayectoria más acumulada y, por eso mismo, más sedimento espacial.</p>
+</section>
+</section>
+<section id="gran-buenos-aires" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="gran-buenos-aires"><span class="header-section-number">7.2</span> Gran Buenos Aires</h2>
+<section id="ajuste-global-y-dependencia-espacial-1" class="level3" data-number="7.2.1">
+<h3 data-number="7.2.1" class="anchored" data-anchor-id="ajuste-global-y-dependencia-espacial-1"><span class="header-section-number">7.2.1</span> Ajuste global y dependencia espacial</h3>
+<p>En Gran Buenos Aires, los modelos globales muestran que la TGF y la PMF 40-44 comparten el mismo andamiaje conceptual, pero no siempre el mismo grado de ajuste ni la misma intensidad espacial. La tabla siguiente separa el bloque lineal de los diagnósticos espaciales globales para evitar una lectura mecánica y deja explícito qué parte del rendimiento proviene del ajuste global y cuál de la estructura residual. En esta sección, por lo tanto, la comparación no es entre ‘modelos distintos’ sino entre la misma arquitectura aplicada a un soporte territorial más chico.</p>
+<div style="border: 1px solid #ddd; padding: 5px; overflow-x: scroll; width:100%; ">
+<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+Ajuste global y dependencia residual para Gran Buenos Aires
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Censo
+</th>
+<th style="text-align:left;">
+Resultado
+</th>
+<th style="text-align:right;">
+N de territorios
+</th>
+<th style="text-align:right;">
+R² ajustado
+</th>
+<th style="text-align:right;">
+AIC del modelo lineal
+</th>
+<th style="text-align:right;">
+Moran de residuos
+</th>
+<th style="text-align:right;">
+p del Moran de residuos
+</th>
+<th style="text-align:right;">
+AIC SAR (lag espacial)
+</th>
+<th style="text-align:right;">
+AIC SEM (error espacial)
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+2010
+</td>
+<td style="text-align:left;">
+TGF
+</td>
+<td style="text-align:right;">
+24
+</td>
+<td style="text-align:right;">
+0.519
+</td>
+<td style="text-align:right;">
+1.172
+</td>
+<td style="text-align:right;">
+0.163
+</td>
+<td style="text-align:right;">
+0.064
+</td>
+<td style="text-align:right;">
+1.883
+</td>
+<td style="text-align:right;">
+0.935
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2010
+</td>
+<td style="text-align:left;">
+PMF 40-44
+</td>
+<td style="text-align:right;">
+24
+</td>
+<td style="text-align:right;">
+0.893
+</td>
+<td style="text-align:right;">
+-22.467
+</td>
+<td style="text-align:right;">
+0.316
+</td>
+<td style="text-align:right;">
+0.004
+</td>
+<td style="text-align:right;">
+-20.468
+</td>
+<td style="text-align:right;">
+-25.197
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2022
+</td>
+<td style="text-align:left;">
+TGF
+</td>
+<td style="text-align:right;">
+24
+</td>
+<td style="text-align:right;">
+0.923
+</td>
+<td style="text-align:right;">
+-56.060
+</td>
+<td style="text-align:right;">
+-0.077
+</td>
+<td style="text-align:right;">
+0.601
+</td>
+<td style="text-align:right;">
+-60.383
+</td>
+<td style="text-align:right;">
+-54.669
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2022
+</td>
+<td style="text-align:left;">
+PMF 40-44
+</td>
+<td style="text-align:right;">
+24
+</td>
+<td style="text-align:right;">
+0.967
+</td>
+<td style="text-align:right;">
+-62.831
+</td>
+<td style="text-align:right;">
+0.210
+</td>
+<td style="text-align:right;">
+0.029
+</td>
+<td style="text-align:right;">
+-61.357
+</td>
+<td style="text-align:right;">
+-63.401
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="síntesis-gwr-del-recorte-1" class="level3" data-number="7.2.2">
+<h3 data-number="7.2.2" class="anchored" data-anchor-id="síntesis-gwr-del-recorte-1"><span class="header-section-number">7.2.2</span> Síntesis GWR del recorte</h3>
+<div style="border: 1px solid #ddd; padding: 5px; overflow-x: scroll; width:100%; ">
+<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+Síntesis GWR para Gran Buenos Aires
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Censo
+</th>
+<th style="text-align:left;">
+Resultado
+</th>
+<th style="text-align:right;">
+Ancho de banda adaptativo
+</th>
+<th style="text-align:right;">
+AICc GWR (corregido)
+</th>
+<th style="text-align:right;">
+R² local promedio
+</th>
+<th style="text-align:right;">
+R² local mínimo
+</th>
+<th style="text-align:right;">
+R² local máximo
+</th>
+<th style="text-align:left;">
+Nota
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+2010
+</td>
+<td style="text-align:left;">
+TGF
+</td>
+<td style="text-align:right;">
+0.168
+</td>
+<td style="text-align:right;">
+70.457
+</td>
+<td style="text-align:right;">
+0.903
+</td>
+<td style="text-align:right;">
+0.755
+</td>
+<td style="text-align:right;">
+0.961
+</td>
+<td style="text-align:left;">
+Recorte pequeño: lectura cautelosa
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2010
+</td>
+<td style="text-align:left;">
+PMF 40-44
+</td>
+<td style="text-align:right;">
+1.000
+</td>
+<td style="text-align:right;">
+-14.609
+</td>
+<td style="text-align:right;">
+0.927
+</td>
+<td style="text-align:right;">
+0.918
+</td>
+<td style="text-align:right;">
+0.929
+</td>
+<td style="text-align:left;">
+Bandwidth alto: poca variación local
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2022
+</td>
+<td style="text-align:left;">
+TGF
+</td>
+<td style="text-align:right;">
+0.333
+</td>
+<td style="text-align:right;">
+-24.883
+</td>
+<td style="text-align:right;">
+0.969
+</td>
+<td style="text-align:right;">
+0.956
+</td>
+<td style="text-align:right;">
+0.981
+</td>
+<td style="text-align:left;">
+Recorte pequeño: lectura cautelosa
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2022
+</td>
+<td style="text-align:left;">
+PMF 40-44
+</td>
+<td style="text-align:right;">
+0.708
+</td>
+<td style="text-align:right;">
+-49.315
+</td>
+<td style="text-align:right;">
+0.979
+</td>
+<td style="text-align:right;">
+0.978
+</td>
+<td style="text-align:right;">
+0.980
+</td>
+<td style="text-align:left;">
+Recorte pequeño: lectura cautelosa
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="lectura-demográfica-del-recorte-1" class="level3" data-number="7.2.3">
+<h3 data-number="7.2.3" class="anchored" data-anchor-id="lectura-demográfica-del-recorte-1"><span class="header-section-number">7.2.3</span> Lectura demográfica del recorte</h3>
+<p>En Gran Buenos Aires, TGF 2022 trabaja con n = 24, R² ajustado = 0,923, Moran de residuos = -0,077, p del Moran de residuos = 0,601, ancho de banda adaptativo = 0,333, AICc GWR (corregido) = -24,883, y R² local promedio = 0,969. PMF 40-44 2022, por su parte, llega a n = 24, R² ajustado = 0,967, Moran de residuos = 0,210, p del Moran de residuos = 0,029, ancho de banda adaptativo = 0,708, AICc GWR (corregido) = -49,315, y R² local promedio = 0,979. La comparación no establece una jerarquía abstracta; muestra que la TGF conserva mejor la pregunta de fecundidad reciente, mientras que la PMF 40-44 condensa una trayectoria más acumulada y, por eso mismo, más sedimento espacial.</p>
+</section>
+</section>
+<section id="caba" class="level2" data-number="7.3">
+<h2 data-number="7.3" class="anchored" data-anchor-id="caba"><span class="header-section-number">7.3</span> CABA</h2>
+<section id="ajuste-global-y-dependencia-espacial-2" class="level3" data-number="7.3.1">
+<h3 data-number="7.3.1" class="anchored" data-anchor-id="ajuste-global-y-dependencia-espacial-2"><span class="header-section-number">7.3.1</span> Ajuste global y dependencia espacial</h3>
+<p>En CABA, los modelos globales muestran que la TGF y la PMF 40-44 comparten el mismo andamiaje conceptual, pero no siempre el mismo grado de ajuste ni la misma intensidad espacial. La tabla siguiente separa el bloque lineal de los diagnósticos espaciales globales para evitar una lectura mecánica y deja explícito qué parte del rendimiento proviene del ajuste global y cuál de la estructura residual. En esta sección, por lo tanto, la comparación no es entre ‘modelos distintos’ sino entre la misma arquitectura aplicada a un soporte territorial más chico.</p>
+<div style="border: 1px solid #ddd; padding: 5px; overflow-x: scroll; width:100%; ">
+<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+Ajuste global y dependencia residual para CABA
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Censo
+</th>
+<th style="text-align:left;">
+Resultado
+</th>
+<th style="text-align:right;">
+N de territorios
+</th>
+<th style="text-align:right;">
+R² ajustado
+</th>
+<th style="text-align:right;">
+AIC del modelo lineal
+</th>
+<th style="text-align:right;">
+Moran de residuos
+</th>
+<th style="text-align:right;">
+p del Moran de residuos
+</th>
+<th style="text-align:right;">
+AIC SAR (lag espacial)
+</th>
+<th style="text-align:right;">
+AIC SEM (error espacial)
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+2010
+</td>
+<td style="text-align:left;">
+TGF
+</td>
+<td style="text-align:right;">
+15
+</td>
+<td style="text-align:right;">
+0.929
+</td>
+<td style="text-align:right;">
+-17.033
+</td>
+<td style="text-align:right;">
+-0.019
+</td>
+<td style="text-align:right;">
+0.357
+</td>
+<td style="text-align:right;">
+-16.441
+</td>
+<td style="text-align:right;">
+-15.103
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2010
+</td>
+<td style="text-align:left;">
+PMF 40-44
+</td>
+<td style="text-align:right;">
+15
+</td>
+<td style="text-align:right;">
+0.918
+</td>
+<td style="text-align:right;">
+-23.066
+</td>
+<td style="text-align:right;">
+0.149
+</td>
+<td style="text-align:right;">
+0.078
+</td>
+<td style="text-align:right;">
+-25.433
+</td>
+<td style="text-align:right;">
+-22.847
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2022
+</td>
+<td style="text-align:left;">
+TGF
+</td>
+<td style="text-align:right;">
+15
+</td>
+<td style="text-align:right;">
+0.920
+</td>
+<td style="text-align:right;">
+-46.773
+</td>
+<td style="text-align:right;">
+-0.093
+</td>
+<td style="text-align:right;">
+0.554
+</td>
+<td style="text-align:right;">
+-46.452
+</td>
+<td style="text-align:right;">
+-46.167
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2022
+</td>
+<td style="text-align:left;">
+PMF 40-44
+</td>
+<td style="text-align:right;">
+15
+</td>
+<td style="text-align:right;">
+0.982
+</td>
+<td style="text-align:right;">
+-44.894
+</td>
+<td style="text-align:right;">
+-0.133
+</td>
+<td style="text-align:right;">
+0.656
+</td>
+<td style="text-align:right;">
+-43.045
+</td>
+<td style="text-align:right;">
+-44.551
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="síntesis-gwr-del-recorte-2" class="level3" data-number="7.3.2">
+<h3 data-number="7.3.2" class="anchored" data-anchor-id="síntesis-gwr-del-recorte-2"><span class="header-section-number">7.3.2</span> Síntesis GWR del recorte</h3>
+<div style="border: 1px solid #ddd; padding: 5px; overflow-x: scroll; width:100%; ">
+<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+Síntesis GWR para CABA
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Censo
+</th>
+<th style="text-align:left;">
+Resultado
+</th>
+<th style="text-align:right;">
+Ancho de banda adaptativo
+</th>
+<th style="text-align:right;">
+AICc GWR (corregido)
+</th>
+<th style="text-align:right;">
+R² local promedio
+</th>
+<th style="text-align:right;">
+R² local mínimo
+</th>
+<th style="text-align:right;">
+R² local máximo
+</th>
+<th style="text-align:left;">
+Nota
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+2010
+</td>
+<td style="text-align:left;">
+TGF
+</td>
+<td style="text-align:right;">
+0.487
+</td>
+<td style="text-align:right;">
+8.470
+</td>
+<td style="text-align:right;">
+0.962
+</td>
+<td style="text-align:right;">
+0.946
+</td>
+<td style="text-align:right;">
+0.978
+</td>
+<td style="text-align:left;">
+Recorte pequeño: lectura cautelosa
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2010
+</td>
+<td style="text-align:left;">
+PMF 40-44
+</td>
+<td style="text-align:right;">
+0.265
+</td>
+<td style="text-align:right;">
+12.768
+</td>
+<td style="text-align:right;">
+0.973
+</td>
+<td style="text-align:right;">
+0.949
+</td>
+<td style="text-align:right;">
+0.988
+</td>
+<td style="text-align:left;">
+Recorte pequeño: lectura cautelosa
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2022
+</td>
+<td style="text-align:left;">
+TGF
+</td>
+<td style="text-align:right;">
+0.267
+</td>
+<td style="text-align:right;">
+4.355
+</td>
+<td style="text-align:right;">
+0.953
+</td>
+<td style="text-align:right;">
+0.914
+</td>
+<td style="text-align:right;">
+0.980
+</td>
+<td style="text-align:left;">
+Recorte pequeño: lectura cautelosa
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2022
+</td>
+<td style="text-align:left;">
+PMF 40-44
+</td>
+<td style="text-align:right;">
+1.000
+</td>
+<td style="text-align:right;">
+-24.025
+</td>
+<td style="text-align:right;">
+0.988
+</td>
+<td style="text-align:right;">
+0.986
+</td>
+<td style="text-align:right;">
+0.991
+</td>
+<td style="text-align:left;">
+Bandwidth alto: poca variación local
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="lectura-demográfica-del-recorte-2" class="level3" data-number="7.3.3">
+<h3 data-number="7.3.3" class="anchored" data-anchor-id="lectura-demográfica-del-recorte-2"><span class="header-section-number">7.3.3</span> Lectura demográfica del recorte</h3>
+<p>En CABA, TGF 2022 trabaja con n = 15, R² ajustado = 0,920, Moran de residuos = -0,093, p del Moran de residuos = 0,554, ancho de banda adaptativo = 0,267, AICc GWR (corregido) = 4,355, y R² local promedio = 0,953. PMF 40-44 2022, por su parte, llega a n = 15, R² ajustado = 0,982, Moran de residuos = -0,133, p del Moran de residuos = 0,656, ancho de banda adaptativo = 1,000, AICc GWR (corregido) = -24,025, y R² local promedio = 0,988. La comparación no establece una jerarquía abstracta; muestra que la TGF conserva mejor la pregunta de fecundidad reciente, mientras que la PMF 40-44 condensa una trayectoria más acumulada y, por eso mismo, más sedimento espacial.</p>
+</section>
+</section>
+</div>
+<p>La regla de lectura regional es la misma que en el nivel nacional, pero la escala cambia el sentido de lo que los números dicen. En el bloque norte, la heterogeneidad territorial tiende a seguir siendo sustantiva; en el corredor metropolitano, la variación suele comprimirse y el valor del modelo local pasa a ser más diagnóstico que demostrativo. Esa diferencia no invalida GWR: la ubica.</p>
+</section>
+<section id="conclusiones" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Conclusiones</h1>
+<p>El aporte principal de este notebook es doble. Metodológicamente, cierra la selección de variables con una regla defendible y replicable: el núcleo nacional se elige por teoría, comparabilidad entre censos, ajuste lineal, persistencia del signo y capacidad para reducir la estructura espacial de los residuos. Sustantivamente, muestra que la fecundidad en Argentina no se organiza de manera aleatoria, sino sobre gradientes sociales y territoriales que cambian de intensidad según el resultado demográfico y la escala territorial. Esa doble lectura es la que deja lista la transición a los modelos locales: primero se depura el universo de variables, después se verifica que el espacio siga importando y recién entonces se pasa a una regresión geográficamente ponderada.</p>
+<p>En Argentina, la TGF queda razonablemente explicada por el bloque seleccionado, pero el Moran residual del modelo lineal sigue siendo suficiente como para justificar SAR, SEM y GWR. PMF 40-44 conserva un ajuste global incluso más alto y una superficie local muy fuerte; eso no la vuelve el objetivo principal de la tesis, pero sí un contraste útil para entender qué cambia cuando miramos una trayectoria casi completada en lugar de la intensidad reciente de la fecundidad. La comparación entre ambas medidas no es decorativa: muestra que el mismo núcleo explicativo dialoga con tiempos demográficos distintos y, por lo tanto, no se agota en una sola superficie de coeficientes.</p>
+<p>En la extensión regional, el contraste se vuelve más nítido. El bloque NOA y NEA sigue siendo el espacio donde la heterogeneidad territorial tiene más sentido analítico: allí la fecundidad local y las desigualdades estructurales dialogan con más claridad con el modelo espacial. Gran Buenos Aires y CABA, en cambio, obligan a una lectura más cauta. No porque el análisis deje de ser válido, sino porque la variación se comprime, la estructura urbana interna pesa más y GWR pasa a ser sobre todo una herramienta de diagnóstico fino.</p>
+<p>GWR agrega valor cuando muestra que una covariable no pesa igual en todos lados y cuando esa variación mejora la lectura demográfica del problema. En esta tesis eso significa, al menos, cuatro cosas: que la educación no opera con la misma intensidad en todo el territorio; que la privación estructural organiza mejor la TGF en algunos recortes que en otros; que la cobertura de salud y la inserción laboral cambian de papel según el contexto; y que la fecundidad argentina no puede resumirse de forma honesta con una sola superficie de coeficientes.</p>
+<p>Ese es el cierre lógico de la secuencia. Los notebooks 2 y 3 depuraron variables y escala; este notebook convierte esa depuración en un modelo espacial explícito. A partir de aquí, el trabajo no consiste en sumar más tablas, sino en afinar la interpretación demográfica de lo que los modelos ya mostraron. En otras palabras, el objetivo ya no es demostrar que el espacio importa, sino precisar cuándo importa más, qué mecanismos resume mejor y en qué recortes territoriales su efecto aparece con mayor nitidez.</p>
+
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">Referencias</h2><div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<div id="ref-clase_1_full" class="csl-entry" role="listitem">
+Bianco, Ana M., y María Eugenia Szretter Noste. 2026. <em>Modelos Estadísticos Interpretables: Tópicos de Modelos Interpretables - 1. Regresión Lineal Múltiple: Modelo, notación matricial, estimadores de mínimos cuadrados, esperanza y covarianza de un vector, propiedades, distribución normal multivariada</em>. Instituto de Cálculo, Facultad de Ciencias Exactas y Naturales, Universidad de Buenos Aires.
+</div>
+<div id="ref-chi_spatial_2008" class="csl-entry" role="listitem">
+Chi, Guangqing, y Jun Zhu. 2008. <span>«Spatial <span>Regression</span> <span>Models</span> for <span>Demographic</span> <span>Analysis</span>»</span>. <em>Popul Res Policy Rev</em> 27 (1): 17-42. <a href="https://doi.org/10.1007/s11113-007-9051-8">https://doi.org/10.1007/s11113-007-9051-8</a>.
+</div>
+<div id="ref-chi_spatial_2019" class="csl-entry" role="listitem">
+Chi, Guangqing, y Jun Zhu. 2019. <em>Spatial Regression Models for the Social Sciences</em>. SAGE Publications, Inc.
+</div>
+<div id="ref-herrera-gomez_variabilidad_2021" class="csl-entry" role="listitem">
+Herrera-Gómez, Marcos, y Juan Carlos Cid. 2021. <em>Variabilidad <span>Espacial</span> en los determinantes de la <span>Fecundidad</span> de <span>Argentina</span> (2001-2010). <span>Un</span> enfoque por <span>Regresiones</span> <span>Geográficamente</span> <span>Ponderadas</span></em>. {MPRA} {Paper}. <a href="https://mpra.ub.uni-muenchen.de/109282/">https://mpra.ub.uni-muenchen.de/109282/</a>.
+</div>
+<div id="ref-indec_anuario_2023_tgf" class="csl-entry" role="listitem">
+Instituto Nacional de Estadística y Censos. 2023. <span>«Anuario Estadístico 2023. Cuadro 3.9.2: tasa global de fecundidad, edad media de la fecundidad y contribución de la fecundidad adolescente, por jurisdicción»</span>. <a href="https://www.indec.gob.ar/ftp/cuadros/sociedad/030902_2023.xlsx">https://www.indec.gob.ar/ftp/cuadros/sociedad/030902_2023.xlsx</a>.
+</div>
+<div id="ref-indec_proyecciones_nacionales_2022_2040" class="csl-entry" role="listitem">
+Instituto Nacional de Estadística y Censos. 2025a. <span>«Proyecciones nacionales de población por sexo y edad 2022-2040»</span>. <a href="https://www.indec.gob.ar/ftp/cuadros/publicaciones/proyecciones_nacionales_2022_2040.pdf">https://www.indec.gob.ar/ftp/cuadros/publicaciones/proyecciones_nacionales_2022_2040.pdf</a>.
+</div>
+<div id="ref-indec_proyecciones_jurisdicciones_2022_2040" class="csl-entry" role="listitem">
+Instituto Nacional de Estadística y Censos. 2025b. <span>«Proyecciones provinciales de población por sexo y edad 2022-2040»</span>. <a href="https://www.indec.gob.ar/ftp/cuadros/publicaciones/proyecciones_jurisdicciones_2022_2040.pdf">https://www.indec.gob.ar/ftp/cuadros/publicaciones/proyecciones_jurisdicciones_2022_2040.pdf</a>.
+</div>
+<div id="ref-pardo_fertility_2025" class="csl-entry" role="listitem">
+Pardo, Ignacio, Nicolás Sacco, Enrique Acosta, y Andrés Castro. 2025. <span>«Fertility <span>Decline</span> to <span>Low</span> and <span>Lowest</span>-<span>Low</span> <span>Levels</span> in <span>Latin</span> <span>America</span>»</span>. <em>Popul Res Policy Rev</em> 44 (1): 9. <a href="https://doi.org/10.1007/s11113-024-09934-y">https://doi.org/10.1007/s11113-024-09934-y</a>.
+</div>
+</div></section></div></main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copiado");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copiado");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
